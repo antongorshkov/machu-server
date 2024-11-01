@@ -1,6 +1,6 @@
 from flask import Flask
 from flask import render_template
-import morning_message
+from morning_message import main
 
 app = Flask(__name__)
 
@@ -10,4 +10,4 @@ def hello_world():
 
 @app.route("/morning_message")
 def morning_message():
-    return morning_message.main({})
+    return main({})
