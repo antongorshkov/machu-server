@@ -3,18 +3,9 @@ import requests
 import json
 import logging
 from datetime import datetime, timedelta
-from logtail import LogtailHandler
+from flask import current_app
 
-handler = LogtailHandler(source_token="TGmx4iCgwQ5RsFLrZCSLsju7")
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.handlers = []
-logger.addHandler(handler)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s:%(levelname)s:%(message)s"
-    )
 
 def formatted_today_date(today):
     # Get the current date
@@ -70,12 +61,12 @@ def SendMessage(Message):
     url = "https://mywhinlite.p.rapidapi.com/sendmsg"
     
     payload = {
-    	"phone_number_or_group_id": "16467338252",
+    	"phone_number_or_group_id": current_app.config['MORNING_MESSAGE_PHONE_NUM'],
     	"is_group": False,
     	"message": Message
     }
     headers = {
-    	"x-rapidapi-key": "d574bdedafmsh0e3d7125d9ded3bp12c38djsnd19751f3439d",
+    	"x-rapidapi-key": current_app.config['RAPID_API_KEY'],
     	"x-rapidapi-host": "mywhinlite.p.rapidapi.com",
     	"Content-Type": "application/json"
     }
@@ -95,7 +86,7 @@ def todayHoliday(today):
 
     url = "https://holidays.abstractapi.com/v1/"
     querystring = {
-        "api_key": "b54e8acec2474fc09802f83cccfe0842", 
+        "api_key": current_app.config['ABSTRACT_API_KEY'], 
         "country": "CR", 
         "year": year, 
         "month": month, 

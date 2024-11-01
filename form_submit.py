@@ -1,4 +1,5 @@
 import requests
+from flask import current_app
 
 def is_currently_living_or_moving_soon(response_data):
     # Define the key for the question and the ID of the "Yes" answer
@@ -22,13 +23,11 @@ def form_submit(args):
     else:
       Message = Name + " does not live here please reject if applied. Phone Number: " + Phone
 
-    #Machukita Test Group: "120363348507910736@g.us"
-    #MV Admin Group: "120363318028761250@g.us"
     #Send a Message to WhatsApp Group
     url = "https://mywhinlite.p.rapidapi.com/sendmsg"
     
-    GroupID = "120363318028761250@g.us" #MV Admins
-    #GroupID = "120363348507910736@g.us" #Machukita Test Group
+    GroupID = current_app.config['MV_ADMINS_GID'] #MV Admins
+    #GroupID = current_app.config['MACHUKITA_TEST_GID']
 
     payload = {
     	"phone_number_or_group_id": GroupID,
@@ -36,7 +35,7 @@ def form_submit(args):
     	"message": Message
     }
     headers = {
-    	"x-rapidapi-key": "d574bdedafmsh0e3d7125d9ded3bp12c38djsnd19751f3439d",
+    	"x-rapidapi-key": current_app.config['RAPID_API_KEY'],
     	"x-rapidapi-host": "mywhinlite.p.rapidapi.com",
     	"Content-Type": "application/json"
     }
