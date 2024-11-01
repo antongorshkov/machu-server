@@ -18,6 +18,8 @@ app.config['MORNING_MESSAGE_PHONE_NUM'] = os.getenv('MORNING_MESSAGE_PHONE_NUM')
 app.config['LOGTAIL_TOKEN'] = os.getenv('LOGTAIL_TOKEN')
 app.config['MACHUKITA_TEST_GID'] = os.getenv('MACHUKITA_TEST_GID')
 app.config['MV_ADMINS_GID'] = os.getenv('MV_ADMINS_GID')
+app.config['AMBIENT_APPLICATION_KEY'] = os.getenv('AMBIENT_APPLICATION_KEY')
+app.config['AMBIENT_API_KEY'] = os.getenv('AMBIENT_API_KEY')
 
 handler = LogtailHandler(source_token=app.config['LOGTAIL_TOKEN'])
 logger = logging.getLogger(__name__)

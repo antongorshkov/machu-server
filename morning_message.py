@@ -3,6 +3,7 @@ import requests
 import json
 import logging
 from datetime import datetime, timedelta
+from weather import yesterday_rain_mm
 from flask import current_app
 
 logger = logging.getLogger(__name__)
@@ -152,9 +153,16 @@ def main(args):
     full_moon_str = FullMoonMsg(today)
     today_holiday_str = todayHoliday(today)
     get_random_quote_str = get_random_quote()
+    yesterday_rain = yesterday_rain_mm()
 
     # Create morning message with conditionally including the full moon message
-    morning_message = formatted_date + "\n" + days_left_str + "\n" + percentage_passed_str
+    morning_message = (
+        formatted_date + "\n" 
+        + days_left_str + "\n" 
+        + percentage_passed_str + "\n" 
+        + "Yesterday we had " + str(yesterday_rain) + "mm of rain." + "\n"
+    )
+
     if full_moon_str:
         morning_message += "\n" + full_moon_str
     if get_random_quote_str:
