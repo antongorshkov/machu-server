@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask import render_template
 from morning_message import main
-from form_submit import form_submit
+from form_submit import form_submit, add_to_group
 from dotenv import load_dotenv
 import os
 import logging
@@ -20,6 +20,8 @@ app.config['MACHUKITA_TEST_GID'] = os.getenv('MACHUKITA_TEST_GID')
 app.config['MV_ADMINS_GID'] = os.getenv('MV_ADMINS_GID')
 app.config['AMBIENT_APPLICATION_KEY'] = os.getenv('AMBIENT_APPLICATION_KEY')
 app.config['AMBIENT_API_KEY'] = os.getenv('AMBIENT_API_KEY')
+app.config['MV_NEIGHBORS_GROUP_ID'] = os.getenv('MV_NEIGHBORS_GROUP_ID')
+app.config['MACHUKITA_TEST_GROUP_ID'] = os.getenv('MACHUKITA_TEST_GROUP_ID')
 
 handler = LogtailHandler(source_token=app.config['LOGTAIL_TOKEN'])
 logger = logging.getLogger(__name__)
@@ -32,11 +34,14 @@ logging.basicConfig(
     format="%(asctime)s:%(levelname)s:%(message)s"
     )
 
+@app.route("/add_to_group", methods=['GET'])
+def add2group():
+    phone_number = request.args.get('phoneNumber')
+    return add_to_group(phone_number)
 
 @app.route("/")
 def hello_world():
     return render_template("index.html")
-
 
 @app.route('/tally_form_submit', methods=['POST'])
 def post_route():
