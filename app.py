@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import logging
 from logtail import LogtailHandler
+import json
 
 # Load environment variables from .env file
 if os.getenv('FLASK_ENV') != 'production':
@@ -48,6 +49,15 @@ def post_route():
     # Get JSON data from the request
     data = request.get_json()
     return form_submit(data)
+
+@app.route('/message_receive', methods=['POST'])
+def message_receive():
+    data = request.get_json()
+    logger.info(data)
+    return {
+        "statusCode": 200,
+        "body": json.dumps("ok")  # Explicitly make the body JSON serializable
+    }
 
 @app.route("/morning_message")
 def morning_message():
