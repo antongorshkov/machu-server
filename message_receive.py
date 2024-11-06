@@ -113,6 +113,8 @@ def send_response(Message, wa_id, is_group):
     	"Content-Type": "application/json"
     }
     
+    logger.info("About to respond to " + wa_id)
+    logger.info(payload)
     response = requests.post(url, json=payload, headers=headers)
     
     logger.info(response)
