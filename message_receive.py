@@ -117,7 +117,12 @@ def send_response(Message, wa_id, is_group):
     logger.info(payload)
     response = requests.post(url, json=payload, headers=headers)
     
-    logger.info(response)
+    # Log the full response
+    try:
+        response_json = response.json()
+        logger.info(f"Response JSON: {response_json}")
+    except ValueError:
+        logger.info(f"Response Text: {response.text}")
 
     return True
 
