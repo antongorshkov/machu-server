@@ -1,13 +1,10 @@
-from flask import Flask, request, jsonify
-from flask import render_template
+import os
+from flask import Flask, render_template, request
+from dotenv import load_dotenv
+from logger_config import configure_logger
 from morning_message import main
 from form_submit import form_submit, add_to_group
 from message_receive import message_receive
-from dotenv import load_dotenv
-import os
-import logging
-from logtail import LogtailHandler
-import json
 
 # Load environment variables from .env file
 if os.getenv('FLASK_ENV') != 'production':
@@ -29,17 +26,7 @@ app.config['OPENAI_ASSISTANT_ID'] = os.getenv('OPENAI_ASSISTANT_ID')
 app.config['MY_WA_NUMBER'] = os.getenv('MY_WA_NUMBER')
 app.config['MACHU_NUMBER'] = os.getenv('MACHU_NUMBER')
 
-
-handler = LogtailHandler(source_token=app.config['LOGTAIL_TOKEN'])
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.handlers = []
-logger.addHandler(handler)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s:%(levelname)s:%(message)s"
-    )
+logger = configure_logger()
 
 @app.route("/add_to_group", methods=['GET'])
 def add2group():

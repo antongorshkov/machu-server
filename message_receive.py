@@ -3,12 +3,12 @@ import logging
 from openai import OpenAI
 import shelve
 import time
-import logging
 from flask import current_app
 import requests
 import re
+from logger_config import configure_logger
 
-logger = logging.getLogger(__name__)
+logger = configure_logger()
 
 client = None
 
@@ -17,7 +17,6 @@ def init_openai_client():
     if client is None:
         OPENAI_API_KEY = current_app.config['OPENAI_API_KEY']
         client = OpenAI(api_key=OPENAI_API_KEY)
-
 
 def create_assistant(file):
     """
@@ -32,17 +31,14 @@ def create_assistant(file):
     )
     return assistant
 
-
 # Use context manager to ensure the shelf file is closed properly
 def check_if_thread_exists(wa_id):
     with shelve.open("threads_db") as threads_shelf:
         return threads_shelf.get(wa_id, None)
 
-
 def store_thread(wa_id, thread_id):
     with shelve.open("threads_db", writeback=True) as threads_shelf:
         threads_shelf[wa_id] = thread_id
-
 
 def run_assistant(thread, name):
     # Retrieve the Assistant
