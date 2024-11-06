@@ -6,9 +6,6 @@ import time
 from flask import current_app
 import requests
 import re
-from logger_config import configure_logger
-
-logger = configure_logger()
 
 client = None
 
@@ -63,6 +60,7 @@ def run_assistant(thread, name):
     messages = client.beta.threads.messages.list(thread_id=thread.id)
     new_message = messages.data[0].content[0].text.value
     logging.info(f"Generated message: {new_message}")
+    current_app.logger.info(f"Generated message: {new_message}")
     return new_message
 
 
@@ -109,16 +107,16 @@ def send_response(Message, wa_id, is_group):
     	"Content-Type": "application/json"
     }
     
-    logger.info("About to respond to " + wa_id)
-    logger.info(payload)
+    current_app.logger.info("About to respond to " + wa_id)
+    current_app.logger.info(payload)
     response = requests.post(url, json=payload, headers=headers)
     
     # Log the full response
     try:
         response_json = response.json()
-        logger.info(f"Response JSON: {response_json}")
+        current_app.logger.info(f"Response JSON: {response_json}")
     except ValueError:
-        logger.info(f"Response Text: {response.text}")
+        current_app.logger.info(f"Response Text: {response.text}")
 
     return True
 
@@ -126,6 +124,7 @@ def clean_string(text):
     # Replace all non-alphanumeric characters with an empty string
     substring = "【6:0†source】"
     cleaned_text = text.replace(substring, '')
+    cleaned_text = text.replace(" or ", ' orr ')  #wierd bug in Whin!
     cleaned_text = re.sub(r'[^A-Za-z0-9\s]', '', cleaned_text)
     return cleaned_text
 
@@ -137,7 +136,7 @@ def message_receive(data):
         sender = data['Info']['Sender'] 
         is_group = data['Info']['IsGroup']
         chat = data['Info']['Chat']
-        logger.info(f"Received message from {name} in chat {chat}")
+        current_app.logger.info(f"Received message from {name} in chat {chat}")
         
         if 'extendedTextMessage' in data['Message']:
             text = data['Message']['extendedTextMessage']['text']
@@ -145,19 +144,19 @@ def message_receive(data):
             text = data['Message']['conversation']
         else:
             text = None
-        logger.info(f"Extracted text: {text}")
+        current_app.logger.info(f"Extracted text: {text}")
         is_machu_mention = current_app.config['MACHU_NUMBER'] in text
         is_from_me = current_app.config['MY_WA_NUMBER'] in sender
 
         if is_group and is_from_me and is_machu_mention:
-            logger.info(f"And now I'm about to respond !!!")
+            current_app.logger.info(f"And now I'm about to respond !!!")
             request_text = text.replace(current_app.config['MACHU_NUMBER'], '').strip()
             request_text = text.replace("@", '').strip()
             response = generate_response(request_text,sender,name)
             send_response(response,chat,is_group) # Send the response to the user
 
     except KeyError as e:
-        logger.error(f"Key error: {e}")
+        current_app.logger.info(f"Key error: {e}")
         text = None
 
     return {
