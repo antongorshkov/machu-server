@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask import render_template
 from morning_message import main
 from form_submit import form_submit, add_to_group
+from message_receive import message_receive
 from dotenv import load_dotenv
 import os
 import logging
@@ -23,6 +24,11 @@ app.config['AMBIENT_APPLICATION_KEY'] = os.getenv('AMBIENT_APPLICATION_KEY')
 app.config['AMBIENT_API_KEY'] = os.getenv('AMBIENT_API_KEY')
 app.config['MV_NEIGHBORS_GROUP_ID'] = os.getenv('MV_NEIGHBORS_GROUP_ID')
 app.config['MACHUKITA_TEST_GROUP_ID'] = os.getenv('MACHUKITA_TEST_GROUP_ID')
+app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
+app.config['OPENAI_ASSISTANT_ID'] = os.getenv('OPENAI_ASSISTANT_ID')
+app.config['MY_WA_NUMBER'] = os.getenv('MY_WA_NUMBER')
+app.config['MACHU_NUMBER'] = os.getenv('MACHU_NUMBER')
+
 
 handler = LogtailHandler(source_token=app.config['LOGTAIL_TOKEN'])
 logger = logging.getLogger(__name__)
@@ -51,13 +57,10 @@ def post_route():
     return form_submit(data)
 
 @app.route('/message_receive', methods=['POST'])
-def message_receive():
+def message_receive_route():
     data = request.get_json()
     logger.info(data)
-    return {
-        "statusCode": 200,
-        "body": json.dumps("ok")  # Explicitly make the body JSON serializable
-    }
+    return message_receive(data)
 
 @app.route("/morning_message")
 def morning_message():
