@@ -142,9 +142,20 @@ def message_receive(data):
             text = data['Message']['extendedTextMessage']['text']
         elif 'conversation' in data['Message']:
             text = data['Message']['conversation']
+        elif 'reactionMessage' in data['Message']:
+            text = data['Message']['text']
+            is_reaction = True
         else:
             text = None
+        
         current_app.logger.info(f"Extracted text: {text}")
+        
+        if text is None or is_reaction:
+            return {
+                "statusCode": 200,
+                "body": json.dumps({"text": "No text found or is reaction"})
+            }
+        
         is_machu_mention = current_app.config['MACHU_NUMBER'] in text
         is_from_me = current_app.config['MY_WA_NUMBER'] in sender
 
