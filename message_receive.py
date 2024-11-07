@@ -137,6 +137,7 @@ def message_receive(data):
         is_group = data['Info']['IsGroup']
         chat = data['Info']['Chat']
         current_app.logger.info(f"Received message from {name} in chat {chat}")
+        is_reaction = False
         
         if 'extendedTextMessage' in data['Message']:
             text = data['Message']['extendedTextMessage']['text']
