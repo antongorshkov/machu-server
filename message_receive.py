@@ -143,7 +143,7 @@ def message_receive(data):
         elif 'conversation' in data['Message']:
             text = data['Message']['conversation']
         elif 'reactionMessage' in data['Message']:
-            text = data['Message']['text']
+            text = data['Message']['reactionMessage']['text']
             is_reaction = True
         else:
             text = None
