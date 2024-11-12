@@ -2,3 +2,4 @@
 __pycache__/*
 .env
 threads_db
+.DS_Store

@@ -9,3 +9,5 @@ logtail-python==0.3.1
 python-dotenv==1.0.1
 aioambient==2024.8.0
 openai==1.54.1
+pycryptodome==3.21.0
+requests==2.31.0
