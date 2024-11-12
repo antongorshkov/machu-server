@@ -15,6 +15,6 @@ def transcribe_audio(audio_file):
         #model_id = "openai/whisper:cdd97b257f93cb89dede1c7584e3f3dfc969571b357dbcee08e793740bedd854"
         output = replicate.run(model_id, input=input)
         # Extract the transcription
-        transcription = output.get('transcription', 'No transcription found.')
+        transcription = output.get('output', {}).get('text') or output.get('transcription', 'No transcription found.')
 
         return transcription
