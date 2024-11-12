@@ -50,6 +50,10 @@ def decrypt_media_file(media_key, encrypted_file_path, output_file_path, app_inf
     with open(output_file_path, 'wb') as file:
         file.write(decrypted_data)
 
+    # Delete the encrypted file after decryption
+    if os.path.exists(encrypted_file_path):
+        os.remove(encrypted_file_path)
+
 def download_and_decrypt(payload):
     media_key = payload['mediaKey']
     url = payload['url']
@@ -73,14 +77,15 @@ def download_and_decrypt(payload):
     decrypt_media_file(media_key, encrypted_file_path, output_file_path, app_info)
 
     print(f"Decrypted [{message_type}] [{complete_filename}]")
+    return output_file_path
 
 # Sample payload
-payload_audio = {
-    'url': 'https://mmg.whatsapp.net/v/t62.7117-24/12098171_1990187224829771_6235292153998745965_n.enc?ccb=11-4&oh=01_Q5AaIIqcRuzK9WBBJFgLwndXVaRW-cB0EbmFsAwZ_Jn4GFmD&oe=675A1646&_nc_sid=5e03e0&mms3=true',
-    'mediaKey': 'v68ThsgiLLQJTk3yKJMVDfyVlDC5BU3QnfQoyFpzci4=',
-    'messageType': 'audioMessage',
-    'whatsappTypeMessageToDecode': 'WhatsApp Audio Keys',
-    'mimetype': 'audio/ogg; codecs=opus'
-}
+#payload_audio = {
+#    'url': 'https://mmg.whatsapp.net/v/t62.7117-24/12098171_1990187224829771_6235292153998745965_n.enc?ccb=11-4&oh=01_Q5AaIIqcRuzK9WBBJFgLwndXVaRW-cB0EbmFsAwZ_Jn4GFmD&oe=675A1646&_nc_sid=5e03e0&mms3=true',
+#    'mediaKey': 'v68ThsgiLLQJTk3yKJMVDfyVlDC5BU3QnfQoyFpzci4=',
+#    'messageType': 'audioMessage',
+#    'whatsappTypeMessageToDecode': 'WhatsApp Audio Keys',
+#    'mimetype': 'audio/ogg; codecs=opus'
+#}
 
-download_and_decrypt(payload_audio)
+#download_and_decrypt(payload_audio)

@@ -6,6 +6,9 @@ import time
 from flask import current_app
 import requests
 import re
+from audio_download_decode import download_and_decrypt
+from transcribe import transcribe_audio
+import os
 
 client = None
 
@@ -128,16 +131,35 @@ def clean_string(text):
     cleaned_text = re.sub(r'[^A-Za-z0-9\s]', '', cleaned_text)
     return cleaned_text
 
+def handle_audio_message(audio_data):
+    payload_audio = {
+        'url': audio_data['URL'],
+        'mediaKey': audio_data['mediaKey'],
+        'messageType': 'audioMessage',
+        'whatsappTypeMessageToDecode': 'WhatsApp Audio Keys',
+        'mimetype': audio_data['mimetype']
+    }
+    audio_file = download_and_decrypt(payload_audio)
+    transcript = transcribe_audio(audio_file)
+
+    # Delete the encrypted file after decryption
+    if os.path.exists(audio_file):
+        os.remove(audio_file)    
+    return transcript
+
 def message_receive(data):
     init_openai_client()
     # Extract the text attribute from the extendedTextMessage or conversation
     try:
         name = data['Info']['PushName']
         sender = data['Info']['Sender'] 
+        is_from_me = current_app.config['MY_WA_NUMBER'] in sender
         is_group = data['Info']['IsGroup']
         chat = data['Info']['Chat']
         current_app.logger.info(f"Received message from {name} in chat {chat}")
         is_reaction = False
+        is_audio = False
+        text = None
         
         if 'extendedTextMessage' in data['Message']:
             text = data['Message']['extendedTextMessage']['text']
@@ -146,19 +168,24 @@ def message_receive(data):
         elif 'reactionMessage' in data['Message']:
             text = data['Message']['reactionMessage']['text']
             is_reaction = True
+        elif 'audioMessage' in data['Message']:
+            is_audio = True
+            transcript = handle_audio_message(data['Message']['audioMessage'])
+            if is_from_me:
+                current_app.logger.info(f"And now I'm about to respond with a transcription!!!")
+                send_response(transcript,chat,is_group) # Send the response to the user
         else:
             text = None
         
         current_app.logger.info(f"Extracted text: {text}")
         
-        if text is None or is_reaction:
+        if text is None or is_reaction or is_audio:
             return {
                 "statusCode": 200,
-                "body": json.dumps({"text": "No text found or is reaction"})
+                "body": json.dumps({"text": "No text found or is reaction or is audio"})
             }
         
         is_machu_mention = current_app.config['MACHU_NUMBER'] in text
-        is_from_me = current_app.config['MY_WA_NUMBER'] in sender
 
         if is_group and is_from_me and is_machu_mention:
             current_app.logger.info(f"And now I'm about to respond !!!")
