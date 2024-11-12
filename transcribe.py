@@ -16,4 +16,5 @@ def transcribe_audio(audio_file):
         output = replicate.run(model_id, input=input)
         # Extract the transcription
         transcription = output.get('transcription', 'No transcription found.')
+        
         return transcription
