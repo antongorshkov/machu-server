@@ -8,7 +8,13 @@ def transcribe_audio(audio_file):
 
     # Open the file in binary mode
     with open(audio_file, "rb") as file_input:
-        input = { "audio": file_input }
+        input = {   "audio": file_input,
+                    "task": "translate",
+                    "language": "None",
+                    "timestamp": "chunk",
+                    "batch_size": 24,
+                    "diarise_audio": False,
+        }
 
         #This model had very long boot-up time
         model_id = "turian/insanely-fast-whisper-with-video:4f41e90243af171da918f04da3e526b2c247065583ea9b757f2071f573965408" ##slow queing time!!
