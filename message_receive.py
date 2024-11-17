@@ -127,8 +127,6 @@ def clean_string(text):
     # Replace all non-alphanumeric characters with an empty string
     substring = "【6:0†source】"
     cleaned_text = text.replace(substring, '')
-    cleaned_text = text.replace(" or ", ' orr ')  #wierd bug in Whin!
-    cleaned_text = text.replace("update", 'uppdate')  #wierd bug in Whin!
     cleaned_text = re.sub(r'[^A-Za-z0-9\s]', '', cleaned_text)
     return cleaned_text
 
