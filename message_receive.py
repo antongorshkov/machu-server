@@ -40,10 +40,9 @@ def store_thread(wa_id, thread_id):
     with shelve.open("threads_db", writeback=True) as threads_shelf:
         threads_shelf[wa_id] = thread_id
 
-def run_assistant(thread, name):
+def run_assistant(thread, name,assistant_id=None):
     # Retrieve the Assistant
-    OPENAI_ASSISTANT_ID = current_app.config['OPENAI_ASSISTANT_ID']
-    assistant = client.beta.assistants.retrieve(OPENAI_ASSISTANT_ID)
+    assistant = client.beta.assistants.retrieve(assistant_id)
 
     # Run the assistant
     run = client.beta.threads.runs.create(
@@ -67,7 +66,7 @@ def run_assistant(thread, name):
     return new_message
 
 
-def generate_response(message_body, wa_id, name):
+def generate_response(message_body, wa_id, name, assistant_id=None):
     # Check if there is already a thread_id for the wa_id
     thread_id = check_if_thread_exists(wa_id)
 
@@ -91,7 +90,7 @@ def generate_response(message_body, wa_id, name):
     )
 
     # Run the assistant and get the new message
-    new_message = run_assistant(thread, name)
+    new_message = run_assistant(thread, name, assistant_id)
 
     return new_message
 
@@ -124,12 +123,22 @@ def send_response(Message, wa_id, is_group):
     return True
 
 def clean_string(text):
-    # Replace all non-alphanumeric characters with an empty string
+    # Replace the specific substring with an empty string
     substring = "【6:0†source】"
     cleaned_text = text.replace(substring, '')
-    cleaned_text = re.sub(r'[^A-Za-z0-9\s]', '', cleaned_text)
+    
+    # Remove non-printable characters
+    cleaned_text = re.sub(r'[^\x20-\x7E]', '', cleaned_text)
+    
     return cleaned_text
 
+def punctuate(text):
+    thread_id = "punct_thread" #don't need threading here, just re-use the same one always
+    # Retrieve the Assistant
+    OPENAI_ASSISTANT_ID = current_app.config['OPENAI_ASSISTANT_ID_PUNCT']
+    punctuated_text = generate_response(text, thread_id, "Punctuation", OPENAI_ASSISTANT_ID)
+    return punctuated_text
+    
 def handle_audio_message(audio_data):
     payload_audio = {
         'url': audio_data['URL'],
@@ -140,11 +149,13 @@ def handle_audio_message(audio_data):
     }
     audio_file = download_and_decrypt(payload_audio)
     transcript = transcribe_audio(audio_file)
+    #punctuated_transcript = punctuate(transcript)
+    punctuated_transcript = transcript
 
     # Delete the encrypted file after decryption
     if os.path.exists(audio_file):
         os.remove(audio_file)    
-    return transcript
+    return punctuated_transcript
 
 def message_receive(data):
     init_openai_client()
@@ -190,7 +201,7 @@ def message_receive(data):
             current_app.logger.info(f"And now I'm about to respond !!!")
             request_text = text.replace(current_app.config['MACHU_NUMBER'], '').strip()
             request_text = text.replace("@", '').strip()
-            response = generate_response(request_text,sender,name)
+            response = generate_response(request_text,sender,name,current_app.config['OPENAI_ASSISTANT_ID'])
             send_response(response,chat,is_group) # Send the response to the user
 
     except KeyError as e:

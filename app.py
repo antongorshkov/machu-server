@@ -24,6 +24,7 @@ app.config['MV_NEIGHBORS_GROUP_ID'] = os.getenv('MV_NEIGHBORS_GROUP_ID')
 app.config['MACHUKITA_TEST_GROUP_ID'] = os.getenv('MACHUKITA_TEST_GROUP_ID')
 app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 app.config['OPENAI_ASSISTANT_ID'] = os.getenv('OPENAI_ASSISTANT_ID')
+app.config['OPENAI_ASSISTANT_ID_PUNCT'] = os.getenv('OPENAI_ASSISTANT_ID_PUNCT')
 app.config['MY_WA_NUMBER'] = os.getenv('MY_WA_NUMBER')
 app.config['MACHU_NUMBER'] = os.getenv('MACHU_NUMBER')
 
