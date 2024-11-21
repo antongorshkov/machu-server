@@ -149,8 +149,8 @@ def handle_audio_message(audio_data):
     }
     audio_file = download_and_decrypt(payload_audio)
     transcript = transcribe_audio(audio_file)
-    #punctuated_transcript = punctuate(transcript)
-    punctuated_transcript = transcript
+    punctuated_transcript = punctuate(transcript)
+    #punctuated_transcript = transcript
 
     # Delete the encrypted file after decryption
     if os.path.exists(audio_file):
