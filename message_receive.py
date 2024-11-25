@@ -170,7 +170,7 @@ def message_receive(data):
         is_reaction = False
         is_audio = False
         text = None
-        
+
         if 'extendedTextMessage' in data['Message']:
             text = data['Message']['extendedTextMessage']['text']
         elif 'conversation' in data['Message']:
@@ -180,9 +180,9 @@ def message_receive(data):
             is_reaction = True
         elif 'audioMessage' in data['Message']:
             is_audio = True
-            transcript = handle_audio_message(data['Message']['audioMessage'])
-            if is_from_me:
-                current_app.logger.info(f"And now I'm about to respond with a transcription!!!")
+            if not is_group:
+                transcript = handle_audio_message(data['Message']['audioMessage'])
+                current_app.logger.info(f"And now I'm about to respond with a transcription.")
                 send_response(transcript,chat,is_group) # Send the response to the user
         else:
             text = None
