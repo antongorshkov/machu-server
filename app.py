@@ -48,6 +48,10 @@ def add2group():
 def hello_world():
     return render_template("index.html")
 
+@app.route("/directory")
+def hello_world():
+    return render_template("directory.html")
+
 @app.route('/tally_form_submit', methods=['POST'])
 def post_route():
     # Get JSON data from the request
