@@ -197,6 +197,10 @@
                         dom: "t"
                     });
                 }
+                // ✅ Bind the search event explicitly after DataTable loads
+                document.getElementById("searchInput").addEventListener("keyup", function () {
+                            table.search(this.value).draw();
+        });
             })
             .catch(error => console.error("Error fetching Airtable data:", error));
         });
