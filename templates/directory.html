@@ -262,7 +262,7 @@
 
                 // "Show All" button
                 let showAllButton = document.createElement("button");
-                showAllButton.className = "uk-button uk-button-default";
+                showAllButton.className = "uk-button uk-button-secondary category-button";
                 showAllButton.innerText = "Show All";
                 showAllButton.onclick = function () {
                     updateURLAndFilter("", null);
@@ -274,7 +274,7 @@
                 uniqueCategories.forEach(categoryLower => {
                     let originalCategory = categoryMapping[categoryLower]; 
                     let button = document.createElement("button");
-                    button.className = "uk-button uk-button-default category-button";
+                    button.className = "uk-button uk-button-primary category-button";
                     button.innerText = originalCategory; 
                     button.onclick = function () {
                         updateURLAndFilter(originalCategory, null);
@@ -355,16 +355,16 @@
 
                 // ✅ Highlight the selected category button
                 function highlightSelectedCategory(selectedCategory) {
-                    document.querySelectorAll(".category-button, .uk-button-default").forEach(button => {
-                        button.classList.remove("uk-button-primary");
-                        button.classList.add("uk-button-default");
+                    document.querySelectorAll(".category-button").forEach(button => {
+                        button.classList.remove("uk-button-primary", "uk-button-secondary");
+                        button.classList.add("uk-button-secondary"); // Default all to secondary
                     });
 
-                    let selectedButton = [...document.querySelectorAll(".category-button, .uk-button-default")]
+                    let selectedButton = [...document.querySelectorAll(".category-button")]
                         .find(button => button.innerText === selectedCategory);
 
                     if (selectedButton) {
-                        selectedButton.classList.remove("uk-button-default");
+                        selectedButton.classList.remove("uk-button-secondary");
                         selectedButton.classList.add("uk-button-primary");
                     }
                 }
@@ -374,6 +374,7 @@
             .catch(error => console.error("Error fetching Airtable data:", error));
         });
 </script>
+
 
 
 </body>
