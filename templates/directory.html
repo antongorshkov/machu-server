@@ -132,23 +132,119 @@
             color: #fff !important;
             border-color: #32d296 !important;
         }
+        /* Desktop/Mobile View Toggle */
+        .table-view { display: block; }
+        .whatsapp-view { display: none !important; }
+
         /* RESPONSIVE LAYOUT */
         @media (max-width: 768px) {
+            .table-view { display: none !important; }
+            .whatsapp-view { 
+                display: block !important;
+                margin-top: 20px;
+            }
+
             .filter-buttons {
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 6px; /* Smaller spacing */
-                margin-bottom: 15px;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin: 16px 0;
             }
 
             .filter-buttons button {
-                width: 48%; /* Ensures two buttons per row */
-                min-width: auto;
-                padding: 10px;
-                font-size: 14px;
+                width: 100%;
+                min-width: 0;
+                padding: 8px;
+                font-size: 13px;
                 text-align: center;
-                border-radius: 6px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* Chat List Styling */
+            .chat-list {
+                background: white;
+                border-radius: 8px;
+                margin-top: 16px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .chat-item {
+                display: flex;
+                align-items: flex-start;
+                padding: 16px;
+                border-bottom: 1px solid #e5e5e5;
+                text-decoration: none;
+                color: inherit;
+                background: white;
+                transition: background-color 0.2s;
+            }
+
+            .chat-item:last-child {
+                border-bottom: none;
+                border-radius: 0 0 8px 8px;
+            }
+
+            .chat-item:first-child {
+                border-radius: 8px 8px 0 0;
+            }
+
+            .chat-item:active {
+                background-color: #f5f5f5;
+            }
+
+            .chat-avatar {
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                background: #32d296;
+                margin-right: 15px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                flex-shrink: 0;
+            }
+
+            .chat-content {
+                flex-grow: 1;
+                min-width: 0;
+            }
+
+            .chat-title {
+                font-weight: bold;
+                margin-bottom: 4px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .chat-category {
+                display: inline-block;
+                font-size: 12px;
+                padding: 2px 8px;
+                border-radius: 12px;
+                background: #e8f5e9;
+                color: #1b5e20;
+                margin-bottom: 4px;
+            }
+
+            .chat-preview {
+                color: #666;
+                font-size: 14px;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .chat-phone {
+                color: #075e54;
+                font-weight: 500;
+                margin-top: 4px;
+                display: block;
             }
 
             /* If category count is odd, center last button */
@@ -177,12 +273,88 @@
                 max-width: 30%; 
             }
 
-            /* 📌 Make table scrollable on small screens */
-            .table-wrapper {
-                width: 100%;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }               
+            /* 📌 Mobile WhatsApp-style view */
+            .table-container {
+                display: none; /* Hide table on mobile */
+            }
+
+            .whatsapp-view {
+                display: none; /* Hidden by default, shown on mobile */
+            }
+
+            .chat-list {
+                margin: 0 -16px;
+                padding: 8px 16px;
+                background: #fff;
+            }
+
+            .chat-item {
+                display: flex;
+                align-items: center;
+                padding: 12px 0;
+                border-bottom: 1px solid #e5e5e5;
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .chat-avatar {
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                background: #32d296;
+                margin-right: 15px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                flex-shrink: 0;
+            }
+
+            .chat-content {
+                flex-grow: 1;
+                min-width: 0; /* Enable text truncation */
+            }
+
+            .chat-title {
+                font-weight: bold;
+                margin-bottom: 4px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .chat-category {
+                display: inline-block;
+                font-size: 12px;
+                padding: 2px 8px;
+                border-radius: 12px;
+                background: #e8f5e9;
+                color: #1b5e20;
+                margin-bottom: 4px;
+            }
+
+            .chat-preview {
+                color: #666;
+                font-size: 14px;
+                display: -webkit-box;
+                display: -moz-box;
+                display: box;
+                -webkit-line-clamp: 2;
+                -moz-line-clamp: 2;
+                line-clamp: 2;
+                -webkit-box-orient: vertical;
+                -moz-box-orient: vertical;
+                box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .chat-phone {
+                color: #075e54; /* WhatsApp green */
+                font-weight: 500;
+                margin-top: 4px;
+                display: block;
+            }
         }
     </style>    
 </head>
@@ -196,27 +368,32 @@
             <input type="text" id="searchInput" class="uk-input uk-form-large" placeholder="Search...">
         </div>
 
-        <!-- Layout: Table & Buttons -->
-        <div class="table-container">
-            
-            <!-- Category Filters (Right-aligned, Moves Above Table on Mobile) -->
-            <div class="filter-buttons">
-                <!-- Buttons will be dynamically added here -->
-            </div>
+        <!-- Category Filters -->
+        <div class="filter-buttons uk-margin">
+            <!-- Buttons will be dynamically added here -->
+        </div>
 
-            <!-- DataTable -->
-            <div class="uk-width-expand">
-                <table id="directoryTable" class="uk-table uk-table-striped display" style="width:100%">
+        <div class="uk-grid uk-grid-small">
+            <!-- Desktop Table View -->
+            <div class="table-view uk-width-1-1">
+                <table id="directoryTable" class="uk-table uk-table-striped uk-table-middle display" style="width:100%">
                     <thead>
                         <tr>
                             <th>Name</th>
                             <th>Category</th>
-                            <th>Phone</th>
                             <th>Description</th>
+                            <th>Phone</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
+            </div>
+
+            <!-- Mobile WhatsApp Style View -->
+            <div class="whatsapp-view uk-width-1-1">
+                <div class="chat-list" id="chatList">
+                    <!-- Chat items will be dynamically added here -->
+                </div>
             </div>
         </div>
     </div>
@@ -249,14 +426,14 @@
                     // ✅ Make phone number clickable for WhatsApp
                     if (phoneNumber !== "No phone") {
                         let cleanNumber = phoneNumber.replace(/\D/g, "");
-                        phoneNumber = `<a href="https://wa.me/${cleanNumber}" target="_blank">${phoneNumber}</a>`;
+                        phoneNumber = cleanNumber; // Store clean number for DataTables
                     }
                     
                     return {
-                        name: record.fields["Title"] || "N/A",
-                        category: category,
-                        description: record.fields["Subtitle"] || "No description",
-                        phone: phoneNumber 
+                        Name: record.fields["Title"] || "N/A",
+                        Category: category,
+                        Description: record.fields["Subtitle"] || "No description",
+                        Phone: phoneNumber 
                     };
                 });
 
@@ -267,9 +444,31 @@
                 // "Show All" button
                 let showAllButton = document.createElement("button");
                 showAllButton.className = "uk-button uk-button-primary category-button";
-                showAllButton.innerText = "Show All";
+                showAllButton.innerText = "All";
                 showAllButton.onclick = function () {
+                    // Clear both search inputs
+                    const customSearchInput = document.getElementById('searchInput');
+                    const dtSearchInput = document.querySelector('.dataTables_filter input');
+                    
+                    // Clear custom search input
+                    if (customSearchInput) {
+                        customSearchInput.value = '';
+                    }
+                    
+                    // Clear DataTables search and redraw
+                    if (dtSearchInput) {
+                        dtSearchInput.value = '';
+                        table.search('').draw();
+                    }
+                    
+                    // Clear category filter and URL parameters
                     filterCategory(this, "");
+                    updateURLAndFilter("", "");
+                    
+                    // Remove search parameter from URL if it exists
+                    const url = new URL(window.location);
+                    url.searchParams.delete('search');
+                    window.history.replaceState({}, '', url);
                 };
                 filterContainer.appendChild(showAllButton);
 
@@ -288,41 +487,97 @@
 
                 // ✅ Initialize DataTable & Store Globally
                 let tableElement = $('#directoryTable');
-                let table;
-                if ($.fn.DataTable.isDataTable("#directoryTable")) {
-                    table = tableElement.DataTable();
-                    table.clear().rows.add(records).draw();
-                } else {
-                    table = tableElement.DataTable({
-                        data: records,
-                        columns: [
-                            { data: "name", title: "Name" },
-                            { data: "category", title: "Category" },
-                            { data: "description", title: "Description" },
-                            { data: "phone", title: "Phone Number" }
-                        ],
-                        paging: false,
-                        info: false,
-                        lengthChange: false,
-                        searching: true,
-                        dom: "t"
+                let table = tableElement.DataTable({
+                    data: records,
+                    columns: [
+                        { data: "Name" },
+                        { data: "Category" },
+                        { data: "Description" },
+                        { 
+                            data: "Phone",
+                            render: function(data, type, row) {
+                                if (type === 'display' && data && data !== 'No phone') {
+                                    return `<a href="https://wa.me/${data}" target="_blank" class="uk-button uk-button-primary uk-button-small uk-flex uk-flex-middle">
+                                        <span uk-icon="whatsapp" class="uk-margin-small-right"></span>${data}
+                                    </a>`;
+                                }
+                                return data;
+                            }
+                        }
+                    ],
+                    paging: false,      // Disable pagination
+                    info: false,        // Hide info ("Showing X of Y entries")
+                    order: [[0, 'asc']],
+                    dom: 't',          // Only show table, no controls
+                    language: {
+                        search: ""     // Remove search label
+                    }
+                });
+
+                // ✅ Populate WhatsApp style view
+                const chatList = document.getElementById('chatList');
+                chatList.innerHTML = ''; // Clear existing items
+
+                // Populate mobile chat view
+                function populateChatList(records) {
+                    const chatList = document.getElementById('chatList');
+                    chatList.innerHTML = ''; // Clear existing items
+
+                    records.forEach(record => {
+                        const phoneNumber = record.Phone ? record.Phone.replace(/[^0-9]/g, '') : '';
+                        const initial = record.Name ? record.Name.charAt(0).toUpperCase() : '?';
+                        const chatItem = document.createElement('a');
+                        chatItem.href = phoneNumber ? `https://wa.me/${phoneNumber}` : '#';
+                        chatItem.className = 'chat-item';
+                        chatItem.innerHTML = `
+                            <div class="chat-avatar">${initial}</div>
+                            <div class="chat-content">
+                                <div class="chat-title">${record.Name || 'Unknown'}</div>
+                                <div class="chat-category">${record.Category || 'Uncategorized'}</div>
+                                <div class="chat-preview">${record.Description || 'No description available'}</div>
+                                ${record.Phone ? `<div class="chat-phone">${record.Phone}</div>` : ''}
+                            </div>
+                        `;
+                        chatList.appendChild(chatItem);
                     });
                 }
+
+                // Initial population of chat list
+                populateChatList(records);
+
+                // Update mobile view when table is filtered
+                table.on('search.dt', function() {
+                    const filteredData = table.rows({ search: 'applied' }).data().toArray();
+                    populateChatList(filteredData);
+                });
+
+                // Handle mobile/desktop view switching
+                function toggleViews() {
+                    const isMobile = window.innerWidth <= 768;
+                    document.querySelector('.table-view').style.display = isMobile ? 'none' : 'block';
+                    document.querySelector('.whatsapp-view').style.display = isMobile ? 'block' : 'none';
+                }
+
+                // Initial check and listen for resize
+                toggleViews();
+                window.addEventListener('resize', toggleViews);
 
                 // ✅ Function to update URL and apply filtering
                 function updateURLAndFilter(category, searchTerm) {
                     let params = new URLSearchParams(window.location.search);
 
+                    // Update category filter
                     if (category !== null) {
                         if (category === "") {
                             params.delete("category");
-                            table.column(1).search("").draw(); // ✅ Correctly reset table
+                            table.column(1).search("", false, false).draw();
                         } else {
                             params.set("category", category);
-                            table.column(1).search(`^${category}$`, true, false).draw();
+                            table.column(1).search("^" + $.fn.dataTable.util.escapeRegex(category) + "$", true, false).draw();
                         }
                     }
 
+                    // Update search term
                     if (searchTerm !== null) {
                         if (searchTerm === "") {
                             params.delete("search");
