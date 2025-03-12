@@ -27,6 +27,9 @@ app.config['OPENAI_ASSISTANT_ID'] = os.getenv('OPENAI_ASSISTANT_ID')
 app.config['OPENAI_ASSISTANT_ID_PUNCT'] = os.getenv('OPENAI_ASSISTANT_ID_PUNCT')
 app.config['MY_WA_NUMBER'] = os.getenv('MY_WA_NUMBER')
 app.config['MACHU_NUMBER'] = os.getenv('MACHU_NUMBER')
+app.config['AIRTABLE_TOKEN'] = os.getenv('AIRTABLE_TOKEN')
+app.config['AIRTABLE_BASE_ID'] = os.getenv('AIRTABLE_BASE_ID')
+app.config['AIRTABLE_TABLE_NAME'] = os.getenv('AIRTABLE_TABLE_NAME', 'main-directory')
 
 handler = LogtailHandler(source_token=app.config['LOGTAIL_TOKEN'])
 logger = logging.getLogger(__name__)
@@ -50,7 +53,10 @@ def hello_world():
 
 @app.route("/directory")
 def directory():
-    return render_template("directory.html")
+    return render_template("directory.html", 
+                           airtable_token=app.config['AIRTABLE_TOKEN'],
+                           airtable_base_id=app.config['AIRTABLE_BASE_ID'],
+                           airtable_table_name=app.config['AIRTABLE_TABLE_NAME'])
 
 @app.route('/tally_form_submit', methods=['POST'])
 def post_route():

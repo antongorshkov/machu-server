@@ -124,7 +124,14 @@
         table.dataTable td.highlight {
             background-color: yellow !important;
             font-weight: bold;
-        }    
+        }
+
+        /* 📌 Selected category button style */
+        .uk-button.category-selected {
+            background-color: #32d296 !important;
+            color: #fff !important;
+            border-color: #32d296 !important;
+        }
         /* RESPONSIVE LAYOUT */
         @media (max-width: 768px) {
             .filter-buttons {
@@ -194,10 +201,7 @@
             
             <!-- Category Filters (Right-aligned, Moves Above Table on Mobile) -->
             <div class="filter-buttons">
-                <button class="uk-button uk-button-primary" onclick="filterCategory(this, 'Tech')">Tech</button>
-                <button class="uk-button uk-button-primary" onclick="filterCategory(this, 'Health')">Health</button>
-                <button class="uk-button uk-button-primary" onclick="filterCategory(this, 'Education')">Education</button>
-                <button class="uk-button uk-button-secondary" onclick="filterCategory(this, '')">Show All</button>
+                <!-- Buttons will be dynamically added here -->
             </div>
 
             <!-- DataTable -->
@@ -218,9 +222,9 @@
     </div>
 <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const airtableToken = "patTaqYav54ZMomF3.7bbc55eb34675aac19df3b00c622728f30ea7f10e393e8262b1c59d9c55cff9b";  // Replace with your actual Airtable API Key
-            const airtableBaseId = "appU0yK4n5WOdzSDU";  // Replace with your Airtable Base ID
-            const airtableTableName = "main-directory";  // Replace with your Airtable Table Name
+            const airtableToken = "{{ airtable_token }}";  // Provided by Flask server
+            const airtableBaseId = "{{ airtable_base_id }}";  // Provided by Flask server
+            const airtableTableName = "{{ airtable_table_name }}";  // Provided by Flask server
             const airtableUrl = `https://api.airtable.com/v0/${airtableBaseId}/${airtableTableName}`;
 
             fetch(airtableUrl, {
@@ -262,10 +266,10 @@
 
                 // "Show All" button
                 let showAllButton = document.createElement("button");
-                showAllButton.className = "uk-button uk-button-secondary category-button";
+                showAllButton.className = "uk-button uk-button-primary category-button";
                 showAllButton.innerText = "Show All";
                 showAllButton.onclick = function () {
-                    updateURLAndFilter("", null);
+                    filterCategory(this, "");
                 };
                 filterContainer.appendChild(showAllButton);
 
@@ -277,7 +281,7 @@
                     button.className = "uk-button uk-button-primary category-button";
                     button.innerText = originalCategory; 
                     button.onclick = function () {
-                        updateURLAndFilter(originalCategory, null);
+                        filterCategory(this, originalCategory);
                     };
                     filterContainer.appendChild(button);
                 });
@@ -310,21 +314,27 @@
                     let params = new URLSearchParams(window.location.search);
 
                     if (category !== null) {
-                        params.set("category", category);
                         if (category === "") {
+                            params.delete("category");
                             table.column(1).search("").draw(); // ✅ Correctly reset table
                         } else {
+                            params.set("category", category);
                             table.column(1).search(`^${category}$`, true, false).draw();
                         }
-                        highlightSelectedCategory(category);
                     }
 
                     if (searchTerm !== null) {
-                        params.set("search", searchTerm);
+                        if (searchTerm === "") {
+                            params.delete("search");
+                        } else {
+                            params.set("search", searchTerm);
+                        }
                         table.search(searchTerm).draw();
                     }
 
-                    history.pushState({}, "", "?" + params.toString());
+                    // Update URL without adding empty parameters
+                    const urlParams = params.toString();
+                    history.pushState({}, "", urlParams ? "?" + urlParams : window.location.pathname);
                 }
 
                 // ✅ Handle Search Input Updates URL
@@ -344,7 +354,12 @@
                         } else {
                             table.column(1).search(`^${category}$`, true, false).draw();
                         }
-                        highlightSelectedCategory(category);
+                        // Find and highlight the button for this category
+                        let categoryButton = [...document.querySelectorAll(".category-button")]
+                            .find(button => button.innerText.toLowerCase() === category.toLowerCase());
+                        if (categoryButton) {
+                            filterCategory(categoryButton, categoryButton.innerText, false);
+                        }
                     }
 
                     if (searchTerm) {
@@ -353,19 +368,19 @@
                     }
                 }
 
-                // ✅ Highlight the selected category button
-                function highlightSelectedCategory(selectedCategory) {
-                    document.querySelectorAll(".category-button").forEach(button => {
-                        button.classList.remove("uk-button-primary", "uk-button-secondary");
-                        button.classList.add("uk-button-secondary"); // Default all to secondary
+                // ✅ Handle category filtering and button styling
+                function filterCategory(button, category, updateState = true) {
+                    // Reset all buttons to primary (blue) style
+                    document.querySelectorAll(".category-button").forEach(btn => {
+                        btn.classList.remove("category-selected");
                     });
 
-                    let selectedButton = [...document.querySelectorAll(".category-button")]
-                        .find(button => button.innerText === selectedCategory);
+                    // Add selected class to highlight the clicked button
+                    button.classList.add("category-selected");
 
-                    if (selectedButton) {
-                        selectedButton.classList.remove("uk-button-secondary");
-                        selectedButton.classList.add("uk-button-primary");
+                    // Update URL and filter table if needed
+                    if (updateState) {
+                        updateURLAndFilter(category, null);
                     }
                 }
 
