@@ -18,73 +18,102 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
     <style>
+        /* General Styling */
         body {
             font-family: "Arial", sans-serif;
             background-color: #f4f4f4;
-            margin: 40px;
+            margin: 20px;
         }
+        
         .container {
-            max-width: 1100px;
+            max-width: 100%;
             margin: auto;
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+    
+        /* Ensure table cells have enough padding for readability */
         table.dataTable tbody tr {
-            height: 60px;
+            height: auto;
         }
+        
         table.dataTable td {
-            font-size: 18px;
-            padding: 15px;
+            font-size: 16px;
+            padding: 12px;
+            word-break: break-word; /* Prevent text overflow */
         }
-
-        /* Hide unwanted DataTables elements */
-        .dataTables_length, .dataTables_paginate, .dataTables_info, .dataTables_filter {
-            display: none !important;
+    
+        /* Prevent Table Overflow on Small Screens */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
         }
-
-        /* Layout for table & category buttons */
-        .table-container {
-            display: flex;
-            align-items: flex-start;
-            gap: 20px;
-        }
-
+    
+        /* Category Filter Buttons */
         .filter-buttons {
             display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+            flex-wrap: wrap;
             gap: 10px;
+            margin-bottom: 15px;
         }
-
-        /* Ensure all buttons have the same width */
+    
         .filter-buttons button {
-            min-width: 150px;
-            width: 150px;
+            flex-grow: 1;
+            min-width: 100px;
+            padding: 10px;
+            font-size: 14px;
+            text-align: center;
         }
-
-        /* Selected button style */
-        .filter-buttons .selected {
-            background-color: #d9534f !important;
-            border-color: #d43f3a !important;
-            color: white !important;
-        }
-
-        /* Responsive: Move category buttons ABOVE table on small screens */
+    
+        /* RESPONSIVE LAYOUT */
         @media (max-width: 768px) {
-            .table-container {
-                flex-direction: column-reverse;
+            .container {
+                padding: 15px;
             }
+    
+            /* Stack elements in column layout on mobile */
+            .table-container {
+                display: flex;
+                flex-direction: column;
+            }
+    
+            /* Move filter buttons to the TOP */
             .filter-buttons {
-                align-items: center;
+                flex-direction: row;
+                justify-content: center;
+                flex-wrap: wrap;
                 margin-bottom: 15px;
             }
+    
             .filter-buttons button {
-                width: 150px;
+                width: auto;
+                font-size: 14px;
+                padding: 8px 12px;
+            }
+    
+            /* Ensure Table is Scrollable Instead of Bleeding Off-Screen */
+            .table-wrapper {
+                width: 100%;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+    
+            table.dataTable {
+                width: 100% !important;
+                border-collapse: collapse;
+            }
+    
+            table.dataTable td, table.dataTable th {
+                font-size: 14px;
+                padding: 10px;
             }
         }
-    </style>
+    </style>    
 </head>
 <body>
 
