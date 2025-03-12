@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resource Directory</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
 
     <!-- UIKit 3 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.16.26/dist/css/uikit.min.css" />
@@ -139,6 +140,31 @@
         .table-view { display: block; }
         .whatsapp-view { display: none !important; }
 
+        /* WhatsApp button styling for both mobile and desktop */
+        .chat-phone {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 16px;
+            background: #e8f5e9;
+            text-decoration: none;
+            color: #000;
+            width: fit-content;
+            font-size: 14px;
+            line-height: 1.2;
+        }
+
+        .chat-phone i {
+            color: #25D366;
+            margin-right: 6px;
+            font-size: 16px;
+        }
+
+        .chat-phone span {
+            color: #000;
+            font-weight: 400;
+        }
+
         /* RESPONSIVE LAYOUT */
         @media (max-width: 768px) {
             .table-view { display: none !important; }
@@ -239,22 +265,18 @@
                 font-size: 14px;
                 display: -webkit-box;
                 -webkit-line-clamp: 2;
+                line-clamp: 2;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
             }
 
-            .chat-phone {
-                display: inline-flex;
-                align-items: center;
-                margin-top: 8px;
-                padding: 4px 12px;
-                border-radius: 12px;
-                border: 1px solid #25D366;
-                color: #075e54;
-                font-weight: 500;
-                background: #e8f5e9;
-                text-decoration: none;
-                transition: all 0.2s ease;
+
+
+            /* Mobile-specific margin */
+            @media (max-width: 768px) {
+                .chat-phone {
+                    margin-top: 8px;
+                }
             }
 
             .chat-phone:active {
@@ -516,8 +538,10 @@
                             data: "Phone",
                             render: function(data, type, row) {
                                 if (type === 'display' && data && data !== 'No phone') {
-                                    return `<a href="https://wa.me/${data}" target="_blank" class="uk-button uk-button-primary uk-button-small uk-flex uk-flex-middle">
-                                        <span uk-icon="whatsapp" class="uk-margin-small-right"></span>${data}
+                                    const phoneNumber = data.replace(/[^0-9]/g, '');
+                                    return `<a href="https://wa.me/${phoneNumber}" class="chat-phone">
+                                        <i class="fab fa-whatsapp"></i>
+                                        <span>${data}</span>
                                     </a>`;
                                 }
                                 return data;

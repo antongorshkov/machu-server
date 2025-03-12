@@ -1,7 +1,7 @@
 import os
 import logging
 from logtail import LogtailHandler
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_from_directory
 from dotenv import load_dotenv
 from morning_message import main
 from form_submit import form_submit, add_to_group
@@ -11,7 +11,7 @@ from message_receive import message_receive
 if os.getenv('FLASK_ENV') != 'production':
     load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config['RAPID_API_KEY'] = os.getenv('RAPID_API_KEY')
 app.config['ABSTRACT_API_KEY'] = os.getenv('ABSTRACT_API_KEY')
 app.config['MORNING_MESSAGE_PHONE_NUM'] = os.getenv('MORNING_MESSAGE_PHONE_NUM')
