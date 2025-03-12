@@ -306,8 +306,18 @@
                                     searchInput.addEventListener("keyup", handleSearch);
 
                                     function handleSearch() {
-                                        console.log("Search Triggered:", this.value);  // ✅ Debugging log
-                                        table.search(this.value).draw();
+                                        let searchTerm = this.value.toLowerCase();
+                                        table.search(searchTerm).draw();
+
+                                        $('#directoryTable tbody tr').each(function () {
+                                            $(this).find('td').each(function () {
+                                                let cellText = $(this).text().toLowerCase();
+                                                $(this).removeClass('highlight');
+                                                if (cellText.includes(searchTerm) && searchTerm.length > 0) {
+                                                    $(this).addClass('highlight');
+                                                }
+                                            });
+                                        });
                                     }
                                 }                                
                             });
