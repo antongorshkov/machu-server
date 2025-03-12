@@ -198,20 +198,34 @@
                             dom: "t"
                         });
                     }
-
-                    let table = tableElement.DataTable(); // ✅ Store DataTable instance
-
-                    // ✅ Ensure Search Works by Rebinding Keyup
-                    let searchInput = document.getElementById("searchInput");
-                    searchInput.removeEventListener("keyup", handleSearch); // Remove old event to avoid duplicates
-                    searchInput.addEventListener("keyup", handleSearch);
-
-                    function handleSearch() {
-                        table.search(this.value).draw();
-                    }
                 })
                 .catch(error => console.error("Error fetching Airtable data:", error));
         });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            function initializeDataTable() {
+                let table = $('#directoryTable').DataTable();
+
+                // ✅ Remove any previous event listener (prevents duplicate bindings)
+                document.getElementById("searchInput").removeEventListener("keyup", searchFunction);
+                
+                // ✅ Attach search event properly
+                document.getElementById("searchInput").addEventListener("keyup", searchFunction);
+
+                function searchFunction() {
+                    console.log("Search Triggered:", this.value);  // ✅ Debugging log
+                    if (table.rows().count() === 0) {
+                            console.log("No rows available, refreshing data...");
+                            table.rows.add([]).draw(); // Prevent search from failing
+                    }                        
+                    table.search(this.value).draw(false);
+                }
+            }
+
+            // ✅ Ensure DataTables is initialized before attaching the search event
+            setTimeout(initializeDataTable, 1000);
+        });
+
 
 
         // Function to filter table by category
