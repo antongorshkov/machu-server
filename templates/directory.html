@@ -127,46 +127,55 @@
         }    
         /* RESPONSIVE LAYOUT */
         @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-
-            /* Stack elements in column layout on mobile */
-            .table-container {
-                display: flex;
-                flex-direction: column;
-            }
-    
-            /* Move filter buttons to the TOP */
             .filter-buttons {
-                flex-direction: row;
-                justify-content: center;
+                display: flex;
                 flex-wrap: wrap;
+                justify-content: center;
+                gap: 6px; /* Smaller spacing */
                 margin-bottom: 15px;
             }
-    
+
             .filter-buttons button {
-                width: auto;
+                width: 48%; /* Ensures two buttons per row */
+                min-width: auto;
+                padding: 10px;
                 font-size: 14px;
-                padding: 8px 12px;
+                text-align: center;
+                border-radius: 6px;
             }
-    
-            /* Ensure Table is Scrollable Instead of Bleeding Off-Screen */
-            .table-wrapper {
+
+            /* If category count is odd, center last button */
+            .filter-buttons button:nth-child(odd):last-child {
                 width: 100%;
-                overflow-x: auto;
-                white-space: nowrap;
             }
-    
+
+            /* 📌 Ensure table text is readable on mobile */
             table.dataTable {
                 width: 100% !important;
                 border-collapse: collapse;
+                font-size: 14px; /* Slightly smaller for mobile */
             }
-    
+
+            /* 📌 Adjust column widths for better readability */
             table.dataTable td, table.dataTable th {
-                font-size: 14px;
-                padding: 10px;
-            }                       
+                padding: 10px 8px; /* Less padding */
+                white-space: nowrap; /* Prevents awkward text wrapping */
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* 📌 Ensure name & category don't break badly */
+            table.dataTable td:nth-child(1), /* Name */
+            table.dataTable td:nth-child(2) { /* Category */
+                max-width: 30%; 
+            }
+
+            /* 📌 Make table scrollable on small screens */
+            .table-wrapper {
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }               
         }
     </style>    
 </head>
