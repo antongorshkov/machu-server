@@ -209,22 +209,19 @@
                             });
                         }
 
-                        // ✅ Wait for Table to Fully Render & THEN Bind Search Event
-                        table.on('draw', function () {
-                            console.log("✅ Table is fully rendered. Binding search event...");
+                    // ✅ Ensure Search Binds ONLY After Table is Ready
+                    setTimeout(() => {
+                            console.log("✅ Table Loaded. Binding search event...");
 
                             let searchInput = document.getElementById("searchInput");
                             searchInput.removeEventListener("keyup", handleSearch);
                             searchInput.addEventListener("keyup", handleSearch);
-                            
+
                             function handleSearch() {
                                 console.log("Search Triggered:", this.value);  // ✅ Debugging log
                                 table.search(this.value).draw();
                             }
-                        });
-
-                        // ✅ Trigger `draw` manually in case the table already rendered
-                        table.draw();
+                        }, 3000); // ✅ Wait 2 seconds to ensure table is fully rendered
                     })
                     .catch(error => console.error("Error fetching Airtable data:", error));
                 });
