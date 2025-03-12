@@ -125,65 +125,75 @@
     </div>
 
     <script>
-    document.addEventListener("DOMContentLoaded", function () {
-            const airtableToken = "patTaqYav54ZMomF3.7bbc55eb34675aac19df3b00c622728f30ea7f10e393e8262b1c59d9c55cff9b";  // Replace with your actual Airtable API Key
-            const airtableBaseId = "appU0yK4n5WOdzSDU";  // Replace with your Airtable Base ID
-            const airtableTableName = "main-directory";  // Replace with your Airtable Table Name
+            document.addEventListener("DOMContentLoaded", function () {
+                const airtableToken = "patTaqYav54ZMomF3.7bbc55eb34675aac19df3b00c622728f30ea7f10e393e8262b1c59d9c55cff9b";  // Replace with your actual Airtable API Key
+                const airtableBaseId = "appU0yK4n5WOdzSDU";  // Replace with your Airtable Base ID
+                const airtableTableName = "main-directory";  // Replace with your Airtable Table Name
 
-            const airtableUrl = `https://api.airtable.com/v0/${airtableBaseId}/${airtableTableName}`;
+                const airtableUrl = `https://api.airtable.com/v0/${airtableBaseId}/${airtableTableName}`;
 
-            fetch(airtableUrl, {
-                headers: {
-                    "Authorization": `Bearer ${airtableToken}`,
-                    "Content-Type": "application/json"
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                let categories = new Set();
-                let records = data.records.map(record => {
-                    let category = record.fields["Category"] 
-                        ? String(record.fields["Category"]).trim()  // Convert to string & trim
-                        : "Uncategorized";  // Default category if empty
-                    categories.add(category);  // Store unique categories
-                    return {
-                        name: record.fields["Title"] || "N/A",
-                        category: category,
-                        description: record.fields["Subtitle"] || "No description",
-                        phone: record.fields["Phone Number"] || "No phone"
+                fetch(airtableUrl, {
+                    headers: {
+                        "Authorization": `Bearer ${airtableToken}`,
+                        "Content-Type": "application/json"
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    let categories = new Set();
+                    let categoryMapping = {}; // Store original category names
+                    
+                    let records = data.records.map(record => {
+                        let category = record.fields["Category"] 
+                            ? String(record.fields["Category"]).trim()  // Convert to string & trim
+                            : "Uncategorized";  // Default category if empty
+                        
+                        let categoryLower = category.toLowerCase();  // Normalize for uniqueness
+                        categories.add(categoryLower);
+                        categoryMapping[categoryLower] = category; // Map lowercase to original
+                        
+                        return {
+                            name: record.fields["Title"] || "N/A",
+                            category: category,  // Store original for proper searching
+                            description: record.fields["Subtitle"] || "No description",
+                            phone: record.fields["Phone Number"] || "No phone"
+                        };
+                    });
+
+                    // Generate category buttons dynamically
+                    let filterContainer = document.querySelector(".filter-buttons");
+                    filterContainer.innerHTML = "";  // Clear existing buttons
+
+                    // "Show All" button
+                    let showAllButton = document.createElement("button");
+                    showAllButton.className = "uk-button uk-button-secondary";
+                    showAllButton.innerText = "Show All";
+                    showAllButton.onclick = function () {
+                        filterCategory(this, "");
                     };
-                });
+                    filterContainer.appendChild(showAllButton);
 
-                // Generate category buttons dynamically
-                let filterContainer = document.querySelector(".filter-buttons");
-                filterContainer.innerHTML = "";  // Clear existing buttons
+                    // Create buttons for each unique category
+                    let uniqueCategories = Array.from(categories).sort();  // Convert Set back to Array & Sort
+                    uniqueCategories.forEach(categoryLower => {
+                        let originalCategory = categoryMapping[categoryLower]; // Get original case version
+                        let button = document.createElement("button");
+                        button.className = "uk-button uk-button-primary";
+                        button.innerText = originalCategory; // Use original casing
+                        button.onclick = function () {
+                            filterCategory(this, originalCategory); // Use original case for search
+                        };
+                        filterContainer.appendChild(button);
+                    });
 
-                // "Show All" button
-                let showAllButton = document.createElement("button");
-                showAllButton.className = "uk-button uk-button-secondary";
-                showAllButton.innerText = "Show All";
-                showAllButton.onclick = function () {
-                    filterCategory(this, "");
-                };
-                filterContainer.appendChild(showAllButton);
-
-                // Create buttons for each unique category
-                categories.forEach(category => {
-                    let button = document.createElement("button");
-                    button.className = "uk-button uk-button-primary";
-                    button.innerText = category;
-                    button.onclick = function () {
-                        filterCategory(this, category);
-                    };
-                    filterContainer.appendChild(button);
-                });
-
-                // ✅ Force Reinitialize DataTable
-                let tableElement = $('#directoryTable');
+                    // ✅ Initialize DataTable AFTER Data Fetch
+                    let tableElement = $('#directoryTable');
+                    let table;
                     if ($.fn.DataTable.isDataTable("#directoryTable")) {
-                        tableElement.DataTable().clear().rows.add(records).draw();
+                        table = tableElement.DataTable();
+                        table.clear().rows.add(records).draw();
                     } else {
-                        tableElement.DataTable({
+                        table = tableElement.DataTable({
                             data: records,
                             columns: [
                                 { data: "name", title: "Name" },
@@ -198,57 +208,35 @@
                             dom: "t"
                         });
                     }
+
+                    // ✅ Bind Search Event ONLY After Data Fetch Completes
+                    let searchInput = document.getElementById("searchInput");
+                    searchInput.removeEventListener("keyup", handleSearch);
+                    searchInput.addEventListener("keyup", handleSearch);
+
+                    function handleSearch() {
+                        console.log("Search Triggered:", this.value);  // ✅ Debugging log
+                        table.search(this.value).draw();
+                    }
                 })
                 .catch(error => console.error("Error fetching Airtable data:", error));
-        });
+            });
 
-        document.addEventListener("DOMContentLoaded", function () {
-            function initializeDataTable() {
+            // Function to filter table by category
+            window.filterCategory = function (button, category) {
                 let table = $('#directoryTable').DataTable();
+                table.column(1).search(category).draw(); // Use exact match for correct filtering
 
-                // ✅ Remove any previous event listener (prevents duplicate bindings)
-                document.getElementById("searchInput").removeEventListener("keyup", searchFunction);
-                
-                // ✅ Attach search event properly
-                document.getElementById("searchInput").addEventListener("keyup", searchFunction);
-
-                function searchFunction() {
-                    console.log("Search Triggered:", this.value);  // ✅ Debugging log
-                    if (table.rows().count() === 0) {
-                            console.log("No rows available, refreshing data...");
-                            table.rows.add([]).draw(); // Prevent search from failing
-                    }                        
-                    table.search(this.value).draw(false);
+                // Highlight selected button
+                document.querySelectorAll(".filter-buttons button").forEach(btn => btn.classList.remove("selected"));
+                if (category !== "") {
+                    button.classList.add("selected");
                 }
-            }
+            };
 
-            // ✅ Ensure DataTables is initialized before attaching the search event
-            setTimeout(initializeDataTable, 1000);
-        });
 
-        document.addEventListener("DOMContentLoaded", function () {
-            setTimeout(function () {
-                let table = $('#directoryTable').DataTable();
 
-                document.getElementById("searchInput").addEventListener("keyup", function () {
-                    console.log("Search Triggered: ", this.value);
-                    table.search(this.value).draw();
-                });
-
-            }, 1000);  // ✅ Wait 1 second to ensure DataTables is ready
-        });
-
-        // Function to filter table by category
-        window.filterCategory = function (button, category) {
-            let table = $('#directoryTable').DataTable();
-            table.column(1).search(category).draw(); // Use exact match for correct filtering
-
-            // Highlight selected button
-            document.querySelectorAll(".filter-buttons button").forEach(btn => btn.classList.remove("selected"));
-            if (category !== "") {
-                button.classList.add("selected");
-            }
-        };
+            
     </script>
 
 </body>
