@@ -236,12 +236,20 @@
                             let categoryLower = category.toLowerCase();  // Normalize for uniqueness
                             categories.add(categoryLower);
                             categoryMapping[categoryLower] = category; // Map lowercase to original
+
+                            let phoneNumber = record.fields["Phone Number"] || "No phone";
+                            
+                            // ✅ Make phone number clickable for WhatsApp
+                            if (phoneNumber !== "No phone") {
+                                let cleanNumber = phoneNumber.replace(/\D/g, ""); // Remove non-numeric characters
+                                phoneNumber = `<a href="https://wa.me/${cleanNumber}" target="_blank">${phoneNumber}</a>`;
+                            }
                             
                             return {
                                 name: record.fields["Title"] || "N/A",
                                 category: category,  // Store original for proper searching
                                 description: record.fields["Subtitle"] || "No description",
-                                phone: record.fields["Phone Number"] || "No phone"
+                                phone: phoneNumber // Use clickable WhatsApp link
                             };
                         });
 
