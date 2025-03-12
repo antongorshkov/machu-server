@@ -205,23 +205,21 @@
                                 info: false,
                                 lengthChange: false,
                                 searching: true,
-                                dom: "t"
+                                dom: "t",
+                                initComplete: function () {
+                                    console.log("✅ DataTable Fully Loaded. Binding Search Event...");
+
+                                    let searchInput = document.getElementById("searchInput");
+                                    searchInput.removeEventListener("keyup", handleSearch);
+                                    searchInput.addEventListener("keyup", handleSearch);
+
+                                    function handleSearch() {
+                                        console.log("Search Triggered:", this.value);  // ✅ Debugging log
+                                        table.search(this.value).draw();
+                                    }
+                                }                                
                             });
                         }
-
-                    // ✅ Ensure Search Binds ONLY After Table is Ready
-                    setTimeout(() => {
-                            console.log("✅ Table Loaded. Binding search event...");
-
-                            let searchInput = document.getElementById("searchInput");
-                            searchInput.removeEventListener("keyup", handleSearch);
-                            searchInput.addEventListener("keyup", handleSearch);
-
-                            function handleSearch() {
-                                console.log("Search Triggered:", this.value);  // ✅ Debugging log
-                                table.search(this.value).draw();
-                            }
-                        }, 3000); // ✅ Wait 2 seconds to ensure table is fully rendered
                     })
                     .catch(error => console.error("Error fetching Airtable data:", error));
                 });
