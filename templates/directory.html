@@ -154,9 +154,9 @@
                             categoryMapping[categoryLower] = category; // Map lowercase to original
                             
                             return {
-                                name: record.fields["Name"] || "N/A",
+                                name: record.fields["Title"] || "N/A",
                                 category: category,  // Store original for proper searching
-                                description: record.fields["Description"] || "No description",
+                                description: record.fields["Subtitle"] || "No description",
                                 phone: record.fields["Phone Number"] || "No phone"
                             };
                         });
