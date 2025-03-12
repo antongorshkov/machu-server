@@ -13,6 +13,9 @@
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
     <!-- jQuery & DataTables.js -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -241,10 +244,26 @@
             }
 
             .chat-phone {
+                display: inline-flex;
+                align-items: center;
+                margin-top: 8px;
+                padding: 4px 12px;
+                border-radius: 12px;
+                border: 1px solid #25D366;
                 color: #075e54;
                 font-weight: 500;
-                margin-top: 4px;
-                display: block;
+                background: #e8f5e9;
+                text-decoration: none;
+                transition: all 0.2s ease;
+            }
+
+            .chat-phone:active {
+                background: #c8e6c9;
+            }
+
+            .chat-phone i {
+                margin-right: 6px;
+                color: #25D366;
             }
 
             /* If category count is odd, center last button */
@@ -535,7 +554,7 @@
                                 <div class="chat-title">${record.Name || 'Unknown'}</div>
                                 <div class="chat-category">${record.Category || 'Uncategorized'}</div>
                                 <div class="chat-preview">${record.Description || 'No description available'}</div>
-                                ${record.Phone ? `<div class="chat-phone">${record.Phone}</div>` : ''}
+                                ${record.Phone ? `<div class="chat-phone"><i class="fab fa-whatsapp"></i>${record.Phone}</div>` : ''}
                             </div>
                         `;
                         chatList.appendChild(chatItem);
