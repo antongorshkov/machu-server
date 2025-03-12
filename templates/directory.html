@@ -226,7 +226,17 @@
             setTimeout(initializeDataTable, 1000);
         });
 
+        document.addEventListener("DOMContentLoaded", function () {
+            setTimeout(function () {
+                let table = $('#directoryTable').DataTable();
 
+                document.getElementById("searchInput").addEventListener("keyup", function () {
+                    console.log("Search Triggered: ", this.value);
+                    table.search(this.value).draw();
+                });
+
+            }, 1000);  // ✅ Wait 1 second to ensure DataTables is ready
+        });
 
         // Function to filter table by category
         window.filterCategory = function (button, category) {
