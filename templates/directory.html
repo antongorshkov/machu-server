@@ -222,66 +222,66 @@
             const airtableBaseId = "appU0yK4n5WOdzSDU";  // Replace with your Airtable Base ID
             const airtableTableName = "main-directory";  // Replace with your Airtable Table Name
             const airtableUrl = `https://api.airtable.com/v0/${airtableBaseId}/${airtableTableName}`;
-        
+
             fetch(airtableUrl, {
                 headers: { "Authorization": `Bearer ${airtableToken}`, "Content-Type": "application/json" }
             })
             .then(response => response.json())
             .then(data => {
                 let categories = new Set();
-                let categoryMapping = {}; // Store original category names
-        
+                let categoryMapping = {};
+
                 let records = data.records.map(record => {
                     let category = record.fields["Category"] 
-                        ? String(record.fields["Category"]).trim()  // Convert to string & trim
-                        : "Uncategorized";  // Default category if empty
-                    
-                    let categoryLower = category.toLowerCase();  // Normalize for uniqueness
+                        ? String(record.fields["Category"]).trim()  
+                        : "Uncategorized";  
+
+                    let categoryLower = category.toLowerCase();  
                     categories.add(categoryLower);
-                    categoryMapping[categoryLower] = category; // Map lowercase to original
-        
+                    categoryMapping[categoryLower] = category;
+
                     let phoneNumber = record.fields["Phone Number"] || "No phone";
                     
                     // ✅ Make phone number clickable for WhatsApp
                     if (phoneNumber !== "No phone") {
-                        let cleanNumber = phoneNumber.replace(/\D/g, ""); // Remove non-numeric characters
+                        let cleanNumber = phoneNumber.replace(/\D/g, "");
                         phoneNumber = `<a href="https://wa.me/${cleanNumber}" target="_blank">${phoneNumber}</a>`;
                     }
                     
                     return {
                         name: record.fields["Title"] || "N/A",
-                        category: category,  // Store original for proper searching
+                        category: category,
                         description: record.fields["Subtitle"] || "No description",
-                        phone: phoneNumber // Use clickable WhatsApp link
+                        phone: phoneNumber 
                     };
                 });
-        
+
                 // Generate category buttons dynamically
                 let filterContainer = document.querySelector(".filter-buttons");
-                filterContainer.innerHTML = "";  // Clear existing buttons
-        
+                filterContainer.innerHTML = "";  
+
                 // "Show All" button
                 let showAllButton = document.createElement("button");
-                showAllButton.className = "uk-button uk-button-secondary";
+                showAllButton.className = "uk-button uk-button-default";
                 showAllButton.innerText = "Show All";
                 showAllButton.onclick = function () {
                     updateURLAndFilter("", null);
                 };
                 filterContainer.appendChild(showAllButton);
-        
+
                 // Create buttons for each unique category
-                let uniqueCategories = Array.from(categories).sort();  // Convert Set back to Array & Sort
+                let uniqueCategories = Array.from(categories).sort();
                 uniqueCategories.forEach(categoryLower => {
-                    let originalCategory = categoryMapping[categoryLower]; // Get original case version
+                    let originalCategory = categoryMapping[categoryLower]; 
                     let button = document.createElement("button");
-                    button.className = "uk-button uk-button-primary";
-                    button.innerText = originalCategory; // Use original casing
+                    button.className = "uk-button uk-button-default category-button";
+                    button.innerText = originalCategory; 
                     button.onclick = function () {
                         updateURLAndFilter(originalCategory, null);
                     };
                     filterContainer.appendChild(button);
                 });
-        
+
                 // ✅ Initialize DataTable & Store Globally
                 let tableElement = $('#directoryTable');
                 let table;
@@ -304,65 +304,77 @@
                         dom: "t"
                     });
                 }
-        
+
                 // ✅ Function to update URL and apply filtering
                 function updateURLAndFilter(category, searchTerm) {
                     let params = new URLSearchParams(window.location.search);
-        
+
                     if (category !== null) {
                         params.set("category", category);
-                        table.column(1).search(`^${category}$`, true, false).draw();
+                        if (category === "") {
+                            table.column(1).search("").draw(); // ✅ Correctly reset table
+                        } else {
+                            table.column(1).search(`^${category}$`, true, false).draw();
+                        }
                         highlightSelectedCategory(category);
                     }
-        
+
                     if (searchTerm !== null) {
                         params.set("search", searchTerm);
                         table.search(searchTerm).draw();
                     }
-        
+
                     history.pushState({}, "", "?" + params.toString());
                 }
-        
+
                 // ✅ Handle Search Input Updates URL
                 document.getElementById("searchInput").addEventListener("keyup", function () {
                     updateURLAndFilter(null, this.value);
                 });
-        
+
                 // ✅ On Page Load, Apply URL Filters
                 function applyURLFilters() {
                     let params = new URLSearchParams(window.location.search);
                     let category = params.get("category");
                     let searchTerm = params.get("search");
-        
+
                     if (category) {
-                        table.column(1).search(`^${category}$`, true, false).draw();
+                        if (category === "") {
+                            table.column(1).search("").draw(); // ✅ Ensure "Show All" works
+                        } else {
+                            table.column(1).search(`^${category}$`, true, false).draw();
+                        }
                         highlightSelectedCategory(category);
                     }
-        
+
                     if (searchTerm) {
                         document.getElementById("searchInput").value = searchTerm;
                         table.search(searchTerm).draw();
                     }
                 }
-        
+
                 // ✅ Highlight the selected category button
                 function highlightSelectedCategory(selectedCategory) {
-                    document.querySelectorAll(".filter-buttons button").forEach(button => {
+                    document.querySelectorAll(".category-button, .uk-button-default").forEach(button => {
                         button.classList.remove("uk-button-primary");
-                        button.classList.add("uk-button-secondary"); // Default all to secondary
-                        if (button.innerText === selectedCategory) {
-                            button.classList.remove("uk-button-secondary");
-                            button.classList.add("uk-button-primary");
-                        }
+                        button.classList.add("uk-button-default");
                     });
+
+                    let selectedButton = [...document.querySelectorAll(".category-button, .uk-button-default")]
+                        .find(button => button.innerText === selectedCategory);
+
+                    if (selectedButton) {
+                        selectedButton.classList.remove("uk-button-default");
+                        selectedButton.classList.add("uk-button-primary");
+                    }
                 }
-        
-                applyURLFilters(); // Apply filters when page loads
+
+                applyURLFilters(); 
             })
             .catch(error => console.error("Error fetching Airtable data:", error));
         });
 </script>
-        
+
 
 </body>
 </html>
