@@ -216,138 +216,153 @@
             </div>
         </div>
     </div>
-
-    <script>
-                document.addEventListener("DOMContentLoaded", function () {
-                    const airtableToken = "patTaqYav54ZMomF3.7bbc55eb34675aac19df3b00c622728f30ea7f10e393e8262b1c59d9c55cff9b";  // Replace with your actual Airtable API Key
-                    const airtableBaseId = "appU0yK4n5WOdzSDU";  // Replace with your Airtable Base ID
-                    const airtableTableName = "main-directory";  // Replace with your Airtable Table Name
-                    const airtableUrl = `https://api.airtable.com/v0/${airtableBaseId}/${airtableTableName}`;
+<script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const airtableToken = "patTaqYav54ZMomF3.7bbc55eb34675aac19df3b00c622728f30ea7f10e393e8262b1c59d9c55cff9b";  // Replace with your actual Airtable API Key
+            const airtableBaseId = "appU0yK4n5WOdzSDU";  // Replace with your Airtable Base ID
+            const airtableTableName = "main-directory";  // Replace with your Airtable Table Name
+            const airtableUrl = `https://api.airtable.com/v0/${airtableBaseId}/${airtableTableName}`;
+        
+            fetch(airtableUrl, {
+                headers: { "Authorization": `Bearer ${airtableToken}`, "Content-Type": "application/json" }
+            })
+            .then(response => response.json())
+            .then(data => {
+                let categories = new Set();
+                let categoryMapping = {}; // Store original category names
+        
+                let records = data.records.map(record => {
+                    let category = record.fields["Category"] 
+                        ? String(record.fields["Category"]).trim()  // Convert to string & trim
+                        : "Uncategorized";  // Default category if empty
                     
-                    let table;  // ✅ Store DataTable instance globally
-
-                    fetch(airtableUrl, {
-                        headers: {
-                            "Authorization": `Bearer ${airtableToken}`,
-                            "Content-Type": "application/json"
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        let categories = new Set();
-                        let categoryMapping = {}; // Store original category names
-                        
-                        let records = data.records.map(record => {
-                            let category = record.fields["Category"] 
-                                ? String(record.fields["Category"]).trim()  // Convert to string & trim
-                                : "Uncategorized";  // Default category if empty
-                            
-                            let categoryLower = category.toLowerCase();  // Normalize for uniqueness
-                            categories.add(categoryLower);
-                            categoryMapping[categoryLower] = category; // Map lowercase to original
-
-                            let phoneNumber = record.fields["Phone Number"] || "No phone";
-                            
-                            // ✅ Make phone number clickable for WhatsApp
-                            if (phoneNumber !== "No phone") {
-                                let cleanNumber = phoneNumber.replace(/\D/g, ""); // Remove non-numeric characters
-                                phoneNumber = `<a href="https://wa.me/${cleanNumber}" target="_blank">${phoneNumber}</a>`;
-                            }
-                            
-                            return {
-                                name: record.fields["Title"] || "N/A",
-                                category: category,  // Store original for proper searching
-                                description: record.fields["Subtitle"] || "No description",
-                                phone: phoneNumber // Use clickable WhatsApp link
-                            };
-                        });
-
-                        // Generate category buttons dynamically
-                        let filterContainer = document.querySelector(".filter-buttons");
-                        filterContainer.innerHTML = "";  // Clear existing buttons
-
-                        // "Show All" button
-                        let showAllButton = document.createElement("button");
-                        showAllButton.className = "uk-button uk-button-secondary";
-                        showAllButton.innerText = "Show All";
-                        showAllButton.onclick = function () {
-                            filterCategory(this, "");
-                        };
-                        filterContainer.appendChild(showAllButton);
-
-                        // Create buttons for each unique category
-                        let uniqueCategories = Array.from(categories).sort();  // Convert Set back to Array & Sort
-                        uniqueCategories.forEach(categoryLower => {
-                            let originalCategory = categoryMapping[categoryLower]; // Get original case version
-                            let button = document.createElement("button");
-                            button.className = "uk-button uk-button-primary";
-                            button.innerText = originalCategory; // Use original casing
-                            button.onclick = function () {
-                                filterCategory(this, originalCategory); // Use original case for search
-                            };
-                            filterContainer.appendChild(button);
-                        });
-
-                        // ✅ Initialize DataTable & Store Globally
-                        let tableElement = $('#directoryTable');
-                        if ($.fn.DataTable.isDataTable("#directoryTable")) {
-                            table = tableElement.DataTable();
-                            table.clear().rows.add(records).draw();
-                        } else {
-                            table = tableElement.DataTable({
-                                data: records,
-                                columns: [
-                                    { data: "name", title: "Name" },
-                                    { data: "category", title: "Category" },
-                                    { data: "description", title: "Description" },
-                                    { data: "phone", title: "Phone Number" }
-                                ],
-                                paging: false,
-                                info: false,
-                                lengthChange: false,
-                                searching: true,
-                                dom: "t",
-                                initComplete: function () {
-                                    console.log("✅ DataTable Fully Loaded. Binding Search Event...");
-
-                                    let searchInput = document.getElementById("searchInput");
-                                    searchInput.removeEventListener("keyup", handleSearch);
-                                    searchInput.addEventListener("keyup", handleSearch);
-
-                                    function handleSearch() {
-                                        let searchTerm = this.value.toLowerCase();
-                                        table.search(searchTerm).draw();
-
-                                        $('#directoryTable tbody tr').each(function () {
-                                            $(this).find('td').each(function () {
-                                                let cellText = $(this).text().toLowerCase();
-                                                $(this).removeClass('highlight');
-                                                if (cellText.includes(searchTerm) && searchTerm.length > 0) {
-                                                    $(this).addClass('highlight');
-                                                }
-                                            });
-                                        });
-                                    }
-                                }                                
-                            });
-                        }
-                    })
-                    .catch(error => console.error("Error fetching Airtable data:", error));
-                });
-
-                // Function to filter table by category
-                window.filterCategory = function (button, category) {
-                    let table = $('#directoryTable').DataTable();
-                    table.column(1).search(category).draw(); // Use exact match for correct filtering
-
-                    // Highlight selected button
-                    document.querySelectorAll(".filter-buttons button").forEach(btn => btn.classList.remove("selected"));
-                    if (category !== "") {
-                        button.classList.add("selected");
+                    let categoryLower = category.toLowerCase();  // Normalize for uniqueness
+                    categories.add(categoryLower);
+                    categoryMapping[categoryLower] = category; // Map lowercase to original
+        
+                    let phoneNumber = record.fields["Phone Number"] || "No phone";
+                    
+                    // ✅ Make phone number clickable for WhatsApp
+                    if (phoneNumber !== "No phone") {
+                        let cleanNumber = phoneNumber.replace(/\D/g, ""); // Remove non-numeric characters
+                        phoneNumber = `<a href="https://wa.me/${cleanNumber}" target="_blank">${phoneNumber}</a>`;
                     }
+                    
+                    return {
+                        name: record.fields["Title"] || "N/A",
+                        category: category,  // Store original for proper searching
+                        description: record.fields["Subtitle"] || "No description",
+                        phone: phoneNumber // Use clickable WhatsApp link
+                    };
+                });
+        
+                // Generate category buttons dynamically
+                let filterContainer = document.querySelector(".filter-buttons");
+                filterContainer.innerHTML = "";  // Clear existing buttons
+        
+                // "Show All" button
+                let showAllButton = document.createElement("button");
+                showAllButton.className = "uk-button uk-button-secondary";
+                showAllButton.innerText = "Show All";
+                showAllButton.onclick = function () {
+                    updateURLAndFilter("", null);
                 };
-
-    </script>
+                filterContainer.appendChild(showAllButton);
+        
+                // Create buttons for each unique category
+                let uniqueCategories = Array.from(categories).sort();  // Convert Set back to Array & Sort
+                uniqueCategories.forEach(categoryLower => {
+                    let originalCategory = categoryMapping[categoryLower]; // Get original case version
+                    let button = document.createElement("button");
+                    button.className = "uk-button uk-button-primary";
+                    button.innerText = originalCategory; // Use original casing
+                    button.onclick = function () {
+                        updateURLAndFilter(originalCategory, null);
+                    };
+                    filterContainer.appendChild(button);
+                });
+        
+                // ✅ Initialize DataTable & Store Globally
+                let tableElement = $('#directoryTable');
+                let table;
+                if ($.fn.DataTable.isDataTable("#directoryTable")) {
+                    table = tableElement.DataTable();
+                    table.clear().rows.add(records).draw();
+                } else {
+                    table = tableElement.DataTable({
+                        data: records,
+                        columns: [
+                            { data: "name", title: "Name" },
+                            { data: "category", title: "Category" },
+                            { data: "description", title: "Description" },
+                            { data: "phone", title: "Phone Number" }
+                        ],
+                        paging: false,
+                        info: false,
+                        lengthChange: false,
+                        searching: true,
+                        dom: "t"
+                    });
+                }
+        
+                // ✅ Function to update URL and apply filtering
+                function updateURLAndFilter(category, searchTerm) {
+                    let params = new URLSearchParams(window.location.search);
+        
+                    if (category !== null) {
+                        params.set("category", category);
+                        table.column(1).search(`^${category}$`, true, false).draw();
+                        highlightSelectedCategory(category);
+                    }
+        
+                    if (searchTerm !== null) {
+                        params.set("search", searchTerm);
+                        table.search(searchTerm).draw();
+                    }
+        
+                    history.pushState({}, "", "?" + params.toString());
+                }
+        
+                // ✅ Handle Search Input Updates URL
+                document.getElementById("searchInput").addEventListener("keyup", function () {
+                    updateURLAndFilter(null, this.value);
+                });
+        
+                // ✅ On Page Load, Apply URL Filters
+                function applyURLFilters() {
+                    let params = new URLSearchParams(window.location.search);
+                    let category = params.get("category");
+                    let searchTerm = params.get("search");
+        
+                    if (category) {
+                        table.column(1).search(`^${category}$`, true, false).draw();
+                        highlightSelectedCategory(category);
+                    }
+        
+                    if (searchTerm) {
+                        document.getElementById("searchInput").value = searchTerm;
+                        table.search(searchTerm).draw();
+                    }
+                }
+        
+                // ✅ Highlight the selected category button
+                function highlightSelectedCategory(selectedCategory) {
+                    document.querySelectorAll(".filter-buttons button").forEach(button => {
+                        button.classList.remove("uk-button-primary");
+                        button.classList.add("uk-button-secondary"); // Default all to secondary
+                        if (button.innerText === selectedCategory) {
+                            button.classList.remove("uk-button-secondary");
+                            button.classList.add("uk-button-primary");
+                        }
+                    });
+                }
+        
+                applyURLFilters(); // Apply filters when page loads
+            })
+            .catch(error => console.error("Error fetching Airtable data:", error));
+        });
+</script>
+        
 
 </body>
 </html>
