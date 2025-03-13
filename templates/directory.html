@@ -13,6 +13,41 @@
 
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    
+    <!-- Custom CSS to override DataTables styling -->
+    <style>
+        /* Override DataTables row background colors */
+        table.dataTable tbody tr,
+        table.dataTable tbody tr.odd,
+        table.dataTable tbody tr.even {
+            background-color: transparent !important;
+        }
+        
+        /* Completely disable DataTables styling */
+        table.dataTable.stripe tbody tr.odd,
+        table.dataTable.display tbody tr.odd {
+            background-color: transparent !important;
+        }
+        
+        table.dataTable.stripe tbody tr.even,
+        table.dataTable.display tbody tr.even {
+            background-color: transparent !important;
+        }
+        
+        /* Override any cell-specific styling */
+        table.dataTable tbody td {
+            background-color: inherit !important;
+        }
+        
+        /* Set explicit background colors for all cells */
+        table.dataTable tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        
+        table.dataTable tbody tr:nth-child(even) td {
+            background-color: #f5f5f5 !important;
+        }
+    </style>
 
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
@@ -25,8 +60,23 @@
         /* General Styling */
         body {
             font-family: "Arial", sans-serif;
-            background-color: #f4f4f4;
+            background-color: #f8f9fa;
             margin: 20px;
+        }
+        
+        /* Force consistent row backgrounds - completely override DataTables styling */
+        table.dataTable.stripe tbody tr.odd,
+        table.dataTable.stripe tbody tr.odd td,
+        table.dataTable tbody tr:nth-child(odd),
+        table.dataTable tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        
+        table.dataTable.stripe tbody tr.even,
+        table.dataTable.stripe tbody tr.even td,
+        table.dataTable tbody tr:nth-child(even),
+        table.dataTable tbody tr:nth-child(even) td {
+            background-color: #f5f5f5 !important;
         }
         
         .container {
@@ -61,20 +111,25 @@
         /* 📌 Improve category button layout */
         .filter-buttons {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            margin-bottom: 20px;
+            flex-wrap: nowrap;
+            gap: 6px;
+            justify-content: flex-start;
+            margin-bottom: 2px;
+            overflow-x: auto;
+            padding-bottom: 0;
+            -webkit-overflow-scrolling: touch;
         }
 
         /* 📌 Category buttons - more compact & uniform */
         .filter-buttons button {
-            flex-grow: 1;
-            min-width: 120px;
-            padding: 10px 12px;
+            flex-grow: 0;
+            flex-shrink: 0;
+            min-width: 80px;
+            padding: 5px 10px;
             font-size: 14px;
             text-align: center;
-            border-radius: 6px;
+            border-radius: 16px;
+            white-space: nowrap;
         }
 
         /* 📌 Ensure table is scrollable & responsive */
@@ -88,6 +143,16 @@
         table.dataTable {
             width: 100% !important;
             border-collapse: collapse;
+            margin-top: 4px !important;
+        }
+
+        /* Apply alternating colors to entire rows */
+        table.dataTable tbody tr:nth-child(odd) {
+            background-color: #ffffff !important;
+        }
+        
+        table.dataTable tbody tr:nth-child(even) {
+            background-color: #f5f5f5 !important;
         }
 
         /* 📌 Adjust column widths */
@@ -112,16 +177,43 @@
         table.dataTable td:nth-child(4) {
             width: 20%;
             text-align: right;
-            font-weight: bold;
+            padding-right: 24px;
+        }
+
+        /* Phone number styling */
+        .chat-phone {
+            display: inline-flex;
+            align-items: center;
+            background: #e8f5e9;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 400;
+            text-decoration: none;
+            color: #1a1a1a;
+            transition: all 0.2s ease;
+        }
+
+        .chat-phone:hover {
+            background: #c8e6c9;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(37,211,102,0.1);
+            text-decoration: none;
+            color: #1a1a1a;
+        }
+
+        .chat-phone i {
+            color: #25D366;
+            margin-right: 8px;
+            font-size: 18px;
         }
 
         /* 📌 Improve row styling */
-        table.dataTable tbody tr:nth-child(even) {
-            background-color: #f9f9f9; /* Alternating row colors */
+        table.dataTable tbody td {
+            background-color: transparent !important;
         }
 
         table.dataTable tbody tr:hover {
-            background-color: #f1f1f1; /* Highlight on hover */
+            background-color: #f1f1f1 !important; /* Highlight on hover */
         }
 
         /* 📌 Highlight search results */
@@ -131,13 +223,93 @@
         }
 
         /* 📌 Selected category button style */
-        .uk-button.category-selected {
+        .uk-button {
+            border-radius: 16px;
+            padding: 0 10px;
+            font-size: 13px;
+            text-transform: capitalize;
+            transition: all 0.2s ease;
+            background: #1e87f0;
+            border: 1px solid #1e87f0;
+            color: white;
+            margin: 0 1px;
+            height: 26px;
+            line-height: 24px;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .uk-button:hover {
+            background: #0f7ae5;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(30,135,240,0.2);
+        }
+
+        .uk-button.uk-button-primary {
             background-color: #32d296 !important;
-            color: #fff !important;
+            color: white !important;
             border-color: #32d296 !important;
+            box-shadow: 0 2px 4px rgba(50,210,150,0.2);
+            font-weight: 500;
         }
         /* Desktop/Mobile View Toggle */
-        .table-view { display: block; }
+        .table-view { 
+            display: block; 
+        }
+
+        /* Table styling improvements */
+        table.dataTable {
+            border-collapse: collapse;
+            border-spacing: 0;
+            margin: 0 !important;
+            width: 100%;
+        }
+
+        table.dataTable thead th {
+            border-bottom: 1px solid #e5e5e5;
+            padding: 4px 20px;
+            font-weight: 500;
+            color: #999;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: transparent;
+        }
+
+        table.dataTable tbody td {
+            padding: 8px 20px;
+            vertical-align: middle;
+            border: none;
+            border-bottom: 1px solid #e5e5e5;
+            transition: all 0.2s ease;
+            line-height: 1.3;
+            font-size: 14px;
+            color: #333;
+            background: none !important;
+        }
+
+        table.dataTable tbody td:first-child {
+            border-left: 1px solid #e5e5e5;
+        }
+
+        table.dataTable tbody td:last-child {
+            border-right: 1px solid #e5e5e5;
+        }
+
+        table.dataTable tbody tr:hover td {
+            background-color: #e9f0f7 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: pointer;
+        }
+
+        table.dataTable tbody tr td:first-child {
+            font-weight: 500;
+            color: #1a1a1a;
+        }
         .whatsapp-view { display: none !important; }
 
         /* WhatsApp button styling for both mobile and desktop */
@@ -401,17 +573,24 @@
 </head>
 <body>
 
-    <div class="uk-container uk-margin-large-top uk-card uk-card-default uk-card-body">
-        <h2 class="uk-heading-line"><span>Resource Directory</span></h2>
+    <div class="uk-container uk-margin-large-top uk-card uk-card-default uk-card-body uk-box-shadow-small" style="max-width: 1000px;">
+        <h2 class="uk-heading-line uk-text-bold uk-margin-small-bottom" style="color: #333;"><span>Resource Directory</span></h2>
 
         <!-- Search Input -->
-        <div class="uk-margin">
-            <input type="text" id="searchInput" class="uk-input uk-form-large" placeholder="Search...">
+        <div class="uk-margin-small-bottom">
+            <div class="uk-inline uk-width-1-1">
+                <span class="uk-form-icon" uk-icon="icon: search"></span>
+                <input type="text" id="searchInput" class="uk-input uk-form-large" placeholder="Search by name, category, or description..." style="border-radius: 8px; padding-left: 40px; font-size: 16px;">
+            </div>
         </div>
 
         <!-- Category Filters -->
-        <div class="filter-buttons uk-margin">
-            <!-- Buttons will be dynamically added here -->
+        <div class="uk-overflow-auto uk-margin-small-bottom">
+            <div style="display: flex; justify-content: center;">
+                <div class="filter-buttons" style="display: inline-flex; gap: 4px; padding: 0 4px; white-space: nowrap;">
+                    <!-- Buttons will be dynamically added here -->
+                </div>
+            </div>
         </div>
 
         <div class="uk-grid uk-grid-small">
@@ -513,48 +692,126 @@
                 };
                 filterContainer.appendChild(showAllButton);
 
-                // Create buttons for each unique category
-                let uniqueCategories = Array.from(categories).sort();
-                uniqueCategories.forEach(categoryLower => {
-                    let originalCategory = categoryMapping[categoryLower]; 
-                    let button = document.createElement("button");
-                    button.className = "uk-button uk-button-primary category-button";
-                    button.innerText = originalCategory; 
-                    button.onclick = function () {
-                        filterCategory(this, originalCategory);
-                    };
-                    filterContainer.appendChild(button);
-                });
-
-                // ✅ Initialize DataTable & Store Globally
-                let tableElement = $('#directoryTable');
-                let table = tableElement.DataTable({
+                // Initialize DataTable with minimal styling
+                const tableElement = $('#directoryTable');
+                const table = tableElement.DataTable({
                     data: records,
                     columns: [
-                        { data: "Name" },
-                        { data: "Category" },
-                        { data: "Description" },
-                        { 
-                            data: "Phone",
+                        { data: 'Name' },
+                        { data: 'Category' },
+                        { data: 'Description' },
+                        {
+                            data: 'Phone',
                             render: function(data, type, row) {
-                                if (type === 'display' && data && data !== 'No phone') {
-                                    const phoneNumber = data.replace(/[^0-9]/g, '');
-                                    return `<a href="https://wa.me/${phoneNumber}" class="chat-phone">
-                                        <i class="fab fa-whatsapp"></i>
-                                        <span>${data}</span>
-                                    </a>`;
+                                if (type === 'display' && data) {
+                                    return `<a href="https://wa.me/${data}" class="chat-phone" target="_blank">
+                                            <i class="fab fa-whatsapp"></i>${data}
+                                           </a>`;
                                 }
                                 return data;
                             }
                         }
                     ],
-                    paging: false,      // Disable pagination
-                    info: false,        // Hide info ("Showing X of Y entries")
                     order: [[0, 'asc']],
-                    dom: 't',          // Only show table, no controls
+                    pageLength: 25,
+                    dom: 't',
                     language: {
-                        search: ""     // Remove search label
+                        search: '',
+                        searchPlaceholder: 'Search...'
+                    },
+                    // Disable all built-in styling
+                    autoWidth: false,
+                    ordering: true,
+                    searching: true,
+                    stripe: false,
+                    hover: false
+                });
+                
+                // Function to apply custom styling
+                function applyCustomStyling() {
+                    // Remove all existing styles
+                    $('#directoryTable tbody tr').removeClass('odd even');
+                    $('#directoryTable tbody tr td').removeAttr('style').removeAttr('class');
+                    
+                    // Apply our custom styling
+                    $('#directoryTable tbody tr').each(function(index) {
+                        // Set background color based on row index
+                        const bgColor = index % 2 === 0 ? '#f5f5f5' : '#ffffff';
+                        
+                        // Apply to the entire row first
+                        $(this).css('background-color', bgColor);
+                        
+                        // Then force each cell to have the same background
+                        $(this).find('td').each(function() {
+                            $(this).attr('style', 'background-color: ' + bgColor + ' !important');
+                        });
+                        
+                        // Special handling for first column
+                        $(this).find('td:first-child').attr('style', 'background-color: ' + bgColor + ' !important; font-weight: 500; color: #1a1a1a;');
+                    });
+                }
+                
+                // Apply styling initially and after any DataTable events
+                applyCustomStyling();
+                table.on('draw', applyCustomStyling);
+                table.on('page', applyCustomStyling);
+                table.on('order', applyCustomStyling);
+
+                // Category filtering function
+                function filterByCategory(category) {
+                    const buttons = document.querySelectorAll('.filter-buttons .uk-button');
+                    buttons.forEach(btn => {
+                        if (btn.textContent === category) {
+                            btn.classList.add('uk-button-primary');
+                        } else {
+                            btn.classList.remove('uk-button-primary');
+                        }
+                    });
+
+                    table.column(1).search(category === 'All' ? '' : category).draw();
+
+                    const url = new URL(window.location);
+                    if (category === 'All') {
+                        url.searchParams.delete('category');
+                    } else {
+                        url.searchParams.set('category', category);
                     }
+                    window.history.pushState({}, '', url);
+                }
+
+                // Create and initialize category buttons
+                const uniqueCategories = [...new Set(records.map(record => record.Category))];
+                uniqueCategories.sort();
+
+                const filterButtons = document.querySelector('.filter-buttons');
+                filterButtons.innerHTML = '';
+                
+                // Add All button first
+                const allButton = document.createElement('button');
+                allButton.className = 'uk-button uk-button-primary';
+                allButton.textContent = 'All';
+                allButton.addEventListener('click', () => filterByCategory('All'));
+                filterButtons.appendChild(allButton);
+
+                // Add other category buttons
+                uniqueCategories.forEach(category => {
+                    const button = document.createElement('button');
+                    button.className = 'uk-button';
+                    button.textContent = category;
+                    button.addEventListener('click', () => filterByCategory(category));
+                    filterButtons.appendChild(button);
+                });
+
+                // Check URL for initial category filter
+                const urlParams = new URLSearchParams(window.location.search);
+                const initialCategory = urlParams.get('category') || 'All';
+                if (initialCategory !== 'All') {
+                    filterByCategory(initialCategory);
+                }
+
+                // Initialize search functionality
+                $('#searchInput').on('keyup', function() {
+                    table.search(this.value).draw();
                 });
 
                 // ✅ Populate WhatsApp style view
