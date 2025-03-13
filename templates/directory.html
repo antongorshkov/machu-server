@@ -573,7 +573,7 @@
 </head>
 <body>
 
-    <div class="uk-container uk-margin-large-top uk-card uk-card-default uk-card-body uk-box-shadow-small" style="max-width: 1000px;">
+    <div class="uk-container uk-margin-large-top uk-card uk-card-default uk-card-body uk-box-shadow-small" style="max-width: 1000px; padding: 20px;">
         <h2 class="uk-heading-line uk-text-bold uk-margin-small-bottom" style="color: #333;"><span>Resource Directory</span></h2>
 
         <!-- Search Input -->
@@ -585,18 +585,159 @@
         </div>
 
         <!-- Category Filters -->
-        <div class="uk-overflow-auto uk-margin-small-bottom">
-            <div style="display: flex; justify-content: center;">
-                <div class="filter-buttons" style="display: inline-flex; gap: 4px; padding: 0 4px; white-space: nowrap;">
+        <div class="uk-margin-small-bottom filter-section">
+            <div class="filter-container">
+                <div class="filter-buttons">
                     <!-- Buttons will be dynamically added here -->
                 </div>
             </div>
         </div>
+        
+        <style>
+            /* Tighten spacing on mobile */
+            @media (max-width: 768px) {
+                .filter-section {
+                    margin-bottom: 0 !important;
+                }
+                
+                #directoryTable_wrapper {
+                    margin-top: 0;
+                }
+                
+                /* Remove extra spacing from table elements */
+                .dataTables_wrapper .dataTables_length, 
+                .dataTables_wrapper .dataTables_filter, 
+                .dataTables_wrapper .dataTables_info, 
+                .dataTables_wrapper .dataTables_processing, 
+                .dataTables_wrapper .dataTables_paginate {
+                    margin-top: 0;
+                    margin-bottom: 0;
+                    padding-top: 0;
+                    padding-bottom: 0;
+                }
+                
+                /* Reduce spacing in table cells */
+                table.dataTable tbody td {
+                    padding-top: 6px;
+                    padding-bottom: 6px;
+                }
+                
+                /* Reduce header spacing */
+                table.dataTable thead th {
+                    padding-top: 6px;
+                    padding-bottom: 6px;
+                }
+            }
+        </style>
+        
+        <style>
+            /* Responsive filter buttons */
+            .filter-container {
+                display: flex;
+                justify-content: center;
+                width: 100%;
+            }
+            
+            .filter-buttons {
+                display: flex;
+                gap: 4px;
+                padding: 0 4px;
+            }
+            
+            /* Category button styling */
+            .category-btn {
+                background-color: #1e87f0;
+                color: white;
+                border-radius: 20px;
+                padding: 6px 14px;
+                margin: 3px;
+                transition: all 0.2s ease;
+                border: none;
+                font-size: 14px;
+            }
+            
+            .category-btn:hover {
+                background-color: #0f7ae5;
+                transform: translateY(-1px);
+            }
+            
+            .category-btn.uk-button-primary {
+                background-color: #32d296;
+            }
+            
+            /* On mobile, allow buttons to wrap and adjust button size */
+            @media (max-width: 768px) {
+                .filter-buttons {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 6px;
+                    margin-bottom: 0;
+                    width: 100%;
+                }
+                
+                /* Reduce spacing around table */
+                .uk-margin-small-bottom {
+                    margin-bottom: 0 !important;
+                }
+                
+                /* Reduce container padding */
+                .uk-card-body {
+                    padding: 12px;
+                }
+                
+                /* Reduce table top margin */
+                .uk-grid {
+                    margin-top: 0 !important;
+                }
+                
+                .category-btn {
+                    padding: 8px 6px;
+                    font-size: 12px;
+                    min-width: auto;
+                    margin: 0;
+                    flex-grow: 0;
+                    width: 100%;
+                    text-overflow: ellipsis;
+                    overflow: hidden;
+                    white-space: nowrap;
+                }
+                
+                /* Special handling for the All button to make it stand out */
+                .filter-buttons .category-btn:first-child {
+                    grid-column: span 3;
+                    width: 50%;
+                    margin: 0 auto;
+                }
+            }
+            
+            /* For very small screens, reduce to 2 columns */
+            @media (max-width: 480px) {
+                .filter-buttons {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                
+                .filter-buttons .category-btn:first-child {
+                    grid-column: span 2;
+                }
+            }
+            
+            /* On desktop, keep buttons in a single scrollable row */
+            @media (min-width: 769px) {
+                .filter-container {
+                    overflow-x: auto;
+                }
+                
+                .filter-buttons {
+                    white-space: nowrap;
+                    flex-wrap: nowrap;
+                }
+            }
+        </style>
 
-        <div class="uk-grid uk-grid-small">
+        <div class="uk-grid uk-grid-small" style="margin-top: 0;">
             <!-- Desktop Table View -->
             <div class="table-view uk-width-1-1">
-                <table id="directoryTable" class="uk-table uk-table-striped uk-table-middle display" style="width:100%">
+                <table id="directoryTable" class="uk-table uk-table-striped uk-table-middle display" style="width:100%; margin-top: 0;">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -759,7 +900,7 @@
 
                 // Category filtering function
                 function filterByCategory(category) {
-                    const buttons = document.querySelectorAll('.filter-buttons .uk-button');
+                    const buttons = document.querySelectorAll('.filter-buttons .category-btn');
                     buttons.forEach(btn => {
                         if (btn.textContent === category) {
                             btn.classList.add('uk-button-primary');
@@ -788,7 +929,7 @@
                 
                 // Add All button first
                 const allButton = document.createElement('button');
-                allButton.className = 'uk-button uk-button-primary';
+                allButton.className = 'uk-button uk-button-primary category-btn';
                 allButton.textContent = 'All';
                 allButton.addEventListener('click', () => filterByCategory('All'));
                 filterButtons.appendChild(allButton);
@@ -796,7 +937,7 @@
                 // Add other category buttons
                 uniqueCategories.forEach(category => {
                     const button = document.createElement('button');
-                    button.className = 'uk-button';
+                    button.className = 'uk-button category-btn';
                     button.textContent = category;
                     button.addEventListener('click', () => filterByCategory(category));
                     filterButtons.appendChild(button);
