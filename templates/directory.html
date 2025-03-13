@@ -16,6 +16,25 @@
     
     <!-- Custom CSS to override DataTables styling -->
     <style>
+        /* Modal width styling */
+        .uk-modal {
+            z-index: 1010 !important; /* Ensure modal has proper z-index */
+        }
+        
+        #add-entry-modal .uk-modal-dialog {
+            width: 400px;
+            max-width: 90%;
+            box-sizing: border-box;
+            margin: 0 auto;
+        }
+        
+        @media (min-width: 640px) {
+            #add-entry-modal .uk-modal-dialog {
+                width: 400px;
+                max-width: 400px;
+            }
+        }
+        
         /* Override DataTables row background colors */
         table.dataTable tbody tr,
         table.dataTable tbody tr.odd,
@@ -423,14 +442,15 @@
                 width: 48px;
                 height: 48px;
                 border-radius: 50%;
-                background: #32d296;
                 margin-right: 15px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 color: white;
-                font-weight: bold;
+                font-weight: 600;
+                font-size: 17px;
                 flex-shrink: 0;
+                letter-spacing: -0.2px;
             }
 
             .chat-content {
@@ -540,14 +560,15 @@
                 width: 48px;
                 height: 48px;
                 border-radius: 50%;
-                background: #32d296;
                 margin-right: 15px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 color: white;
-                font-weight: bold;
+                font-weight: 600;
+                font-size: 17px;
                 flex-shrink: 0;
+                letter-spacing: -0.2px;
             }
 
             .chat-content {
@@ -906,8 +927,18 @@
     </div>
     
     <!-- Add/Edit Entry Modal -->
-    <div id="add-entry-modal" uk-modal>
-        <div class="uk-modal-dialog uk-modal-body" style="width: 100%; max-width: 320px;">
+    <div id="add-entry-modal" class="uk-modal-container" uk-modal>
+        <div class="uk-modal-dialog uk-modal-body">
+            <style>
+                /* Modal width styling */
+                #add-entry-modal .uk-modal-dialog {
+                    width: 400px;
+                    max-width: 90%;
+                    box-sizing: border-box;
+                    margin: 0 auto;
+                }
+            </style>
+            
             <button class="uk-modal-close-default" type="button" uk-close></button>
             <h2 class="uk-modal-title" id="modal-title">Add New Resource</h2>
             <form id="add-entry-form" class="uk-form-stacked">
@@ -953,7 +984,19 @@
         </div>
     </div>
 <script>
+        // Ensure there are no stray modal overlays when the page loads
         document.addEventListener("DOMContentLoaded", function () {
+            // Remove any existing modal overlays that might be blocking interactions
+            const existingOverlays = document.querySelectorAll('.uk-modal-overlay');
+            existingOverlays.forEach(overlay => overlay.remove());
+            
+            // Make sure no modals are open on page load
+            const modals = document.querySelectorAll('.uk-modal');
+            modals.forEach(modal => {
+                if (modal.classList.contains('uk-open')) {
+                    UIkit.modal(modal).hide();
+                }
+            });
             // Function to add avatars to name cells
             function addAvatarsToTable() {
                 const nameCells = document.querySelectorAll('.name-with-avatar');
@@ -1088,7 +1131,7 @@
                         {
                             data: null,
                             render: function(data, type, row) {
-                                return `<button class="edit-button" data-record-id="${row.RecordId}"><span uk-icon="pencil"></span></button>`;
+                                return `<button class="uk-button uk-button-small edit-button" data-record-id="${row.RecordId}"><span uk-icon="pencil"></span></button>`;
                             },
                             orderable: false,
                             width: '60px',
@@ -1125,22 +1168,20 @@
                 // After table is initialized, add avatars
                 setTimeout(addAvatarsToTable, 100);
                 
-                // Handle edit button clicks
-                $('#directoryTable tbody').on('click', '.edit-button', function() {
-                    // Check if it's a direct button in name column (mobile)
+                // Handle edit button clicks - simplified approach
+                $('#directoryTable').on('click', '.edit-button', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Get the record ID from the button
                     const recordId = $(this).data('record-id');
+                    
                     if (recordId) {
                         // Find the record in the data
-                        for (let i = 0; i < records.length; i++) {
-                            if (records[i].RecordId === recordId) {
-                                openEditModal(records[i]);
-                                return;
-                            }
+                        const record = records.find(r => r.RecordId === recordId);
+                        if (record) {
+                            openEditModal(record);
                         }
-                    } else {
-                        // Desktop view: get row data
-                        const data = table.row($(this).parents('tr')).data();
-                        openEditModal(data);
                     }
                 });
                 
@@ -1265,10 +1306,17 @@
                         leftContainer.style.overflow = 'visible';
                         leftContainer.style.boxSizing = 'border-box';
                         
-                        // Create the avatar
+                        // Create the avatar with dynamic color based on name
                         const avatar = document.createElement('div');
                         avatar.className = 'chat-avatar';
                         avatar.textContent = initial;
+                        
+                        // Generate a color based on the name (matching desktop view)
+                        const colors = ['#32d296', '#1e87f0', '#f0506e', '#faa05a', '#9D33D6', '#00a8e8', '#3e4a61', '#B15DFF', '#2575fc'];
+                        const colorIndex = Math.abs(record.Name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % colors.length;
+                        const bgColor = colors[colorIndex];
+                        avatar.style.backgroundColor = bgColor;
+                        
                         leftContainer.appendChild(avatar);
                         
                         // Create the content
