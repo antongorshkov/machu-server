@@ -308,6 +308,76 @@ def update_directory_entry():
         logger.error(error_msg)
         return jsonify({"success": False, "error": error_msg}), 500
 
+@app.route("/delete_directory_entry", methods=['POST'])
+def delete_directory_entry():
+    """Delete an existing entry from the Airtable directory"""
+    # Log the incoming data
+    data = request.get_json()
+    logger.info(f"Received delete request: {data}")
+    
+    # Check if record_id is provided
+    if not data.get('record_id'):
+        error_msg = "Record ID is required for deletion"
+        logger.error(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 400
+    
+    # Extract record ID
+    record_id = data.get('record_id')
+    
+    # Get Airtable credentials from app.config
+    airtable_token = app.config.get('AIRTABLE_API_KEY') or app.config.get('AIRTABLE_TOKEN')
+    airtable_base_id = app.config.get('AIRTABLE_BASE_ID')
+    airtable_table_name = app.config.get('AIRTABLE_TABLE_NAME')
+    
+    # Check if we have all required credentials
+    if not all([airtable_token, airtable_base_id, airtable_table_name]):
+        missing = []
+        if not airtable_token: missing.append("AIRTABLE_API_KEY")
+        if not airtable_base_id: missing.append("AIRTABLE_BASE_ID")
+        if not airtable_table_name: missing.append("AIRTABLE_TABLE_NAME")
+        
+        error_msg = f"Missing required environment variables: {', '.join(missing)}"
+        logger.error(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 500
+    
+    # Use the direct URL for the specific record
+    airtable_url = f"https://api.airtable.com/v0/{airtable_base_id}/{airtable_table_name}/{record_id}"
+    logger.info(f"Airtable URL for delete: {airtable_url}")
+    
+    # Set headers for the Airtable API
+    headers = { 
+        "Authorization": f"Bearer {airtable_token}", 
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        # Send DELETE request to Airtable
+        response = requests.delete(airtable_url, headers=headers, timeout=10)
+        
+        # Check for errors
+        if response.status_code >= 400:
+            error_text = response.text
+            logger.error(f"Airtable error response: {error_text}")
+            return jsonify({"success": False, "error": f"Airtable API error: {error_text}"}), response.status_code
+        
+        # Return success response
+        return jsonify({"success": True, "message": "Record deleted successfully"}), 200
+        
+    except requests.exceptions.Timeout:
+        error_msg = "Request to Airtable timed out"
+        logger.error(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 504
+        
+    except requests.exceptions.RequestException as req_err:
+        error_msg = f"Request to Airtable failed: {str(req_err)}"
+        logger.error(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 502
+        
+    except Exception as e:
+        error_msg = f"Unexpected error deleting record: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 500
+
 @app.route('/tally_form_submit', methods=['POST'])
 def post_route():
     # Get JSON data from the request

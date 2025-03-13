@@ -192,6 +192,27 @@
             color: #1a1a1a;
             transition: all 0.2s ease;
         }
+        
+        /* Ensure edit button column is always visible */
+        .never-hide {
+            display: table-cell !important;
+        }
+        
+        /* Better styling for edit button on mobile */
+        @media (max-width: 767px) {
+            .edit-btn {
+                padding: 0 10px;
+                min-height: 30px;
+            }
+            
+            /* Make sure edit button stays visible */
+            #directoryTable th:last-child,
+            #directoryTable td:last-child {
+                width: 40px !important;
+                min-width: 40px !important;
+                display: table-cell !important;
+            }
+        }
 
         .chat-phone:hover {
             background: #c8e6c9;
@@ -722,6 +743,45 @@
                 .filter-buttons .category-btn:first-child {
                     grid-column: span 2;
                 }
+                
+                /* Mobile modal improvements */
+                #add-entry-modal .uk-modal-dialog {
+                    position: fixed !important;
+                    top: 50% !important;
+                    left: 40% !important;
+                    transform: translate(-50%, -50%) !important;
+                    width: 300px !important;
+                    padding: 15px !important;
+                    box-sizing: border-box !important;
+                    margin: 0 !important;
+                }
+                
+                .uk-modal-title {
+                    font-size: 1.25rem;
+                    margin-bottom: 10px;
+                }
+                
+                .uk-form-label {
+                    margin-bottom: 5px;
+                }
+                
+                .uk-button {
+                    padding: 0 15px;
+                    font-size: 0.875rem;
+                }
+                
+                /* Stack form buttons vertically on very small screens */
+                .uk-margin.uk-text-right {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                
+                /* Make buttons full width */
+                .uk-margin.uk-text-right button {
+                    width: 100%;
+                    margin-left: 0 !important;
+                    margin-right: 0 !important;
+                }
             }
             
             /* On desktop, keep buttons in a single scrollable row */
@@ -765,7 +825,7 @@
     
     <!-- Add/Edit Entry Modal -->
     <div id="add-entry-modal" uk-modal>
-        <div class="uk-modal-dialog uk-modal-body">
+        <div class="uk-modal-dialog uk-modal-body" style="width: 100%; max-width: 320px;">
             <button class="uk-modal-close-default" type="button" uk-close></button>
             <h2 class="uk-modal-title" id="modal-title">Add New Resource</h2>
             <form id="add-entry-form" class="uk-form-stacked">
@@ -801,7 +861,9 @@
                     </div>
                 </div>
                 
-                <div class="uk-margin uk-text-right">
+                <div class="uk-margin uk-text-right" style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px;">
+                    <!-- Delete button - only show when editing -->
+                    <button class="uk-button uk-button-danger" type="button" id="delete-entry" style="display:none; background-color: #f0506e; color: white; font-weight: bold;">Delete</button>
                     <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
                     <button class="uk-button uk-button-primary" type="submit" id="submit-entry">Submit</button>
                 </div>
@@ -891,7 +953,9 @@
                 table = tableElement.DataTable({
                     data: records,
                     columns: [
-                        { data: 'Name' },
+                        { 
+                            data: 'Name'
+                        },
                         { data: 'Category' },
                         { data: 'Description' },
                         {
@@ -909,7 +973,9 @@
                             data: null,
                             defaultContent: '<button class="uk-button uk-button-small uk-button-primary edit-btn"><span uk-icon="pencil"></span></button>',
                             orderable: false,
-                            width: '60px'
+                            width: '60px',
+                            className: 'dt-body-center never-hide',
+                            responsivePriority: 1
                         }
                     ],
                     order: [[0, 'asc']],
@@ -929,8 +995,21 @@
                 
                 // Handle edit button clicks
                 $('#directoryTable tbody').on('click', '.edit-btn', function() {
-                    const data = table.row($(this).parents('tr')).data();
-                    openEditModal(data);
+                    // Check if it's a direct button in name column (mobile)
+                    const recordId = $(this).data('record-id');
+                    if (recordId) {
+                        // Find the record in the data
+                        for (let i = 0; i < records.length; i++) {
+                            if (records[i].RecordId === recordId) {
+                                openEditModal(records[i]);
+                                return;
+                            }
+                        }
+                    } else {
+                        // Desktop view: get row data
+                        const data = table.row($(this).parents('tr')).data();
+                        openEditModal(data);
+                    }
                 });
                 
                 // Function to apply custom styling
@@ -1032,18 +1111,69 @@
                     records.forEach(record => {
                         const phoneNumber = record.Phone ? record.Phone.replace(/[^0-9]/g, '') : '';
                         const initial = record.Name ? record.Name.charAt(0).toUpperCase() : '?';
-                        const chatItem = document.createElement('a');
-                        chatItem.href = phoneNumber ? `https://wa.me/${phoneNumber}` : '#';
+                        
+                        // Create div instead of <a> to allow edit button to work
+                        const chatItem = document.createElement('div');
                         chatItem.className = 'chat-item';
-                        chatItem.innerHTML = `
-                            <div class="chat-avatar">${initial}</div>
-                            <div class="chat-content">
-                                <div class="chat-title">${record.Name || 'Unknown'}</div>
-                                <div class="chat-category">${record.Category || 'Uncategorized'}</div>
-                                <div class="chat-preview">${record.Description || 'No description available'}</div>
-                                ${record.Phone ? `<div class="chat-phone"><i class="fab fa-whatsapp"></i>${record.Phone}</div>` : ''}
-                            </div>
+                        
+                        // Create wrapper for content and edit button
+                        const contentWrapper = document.createElement('div');
+                        contentWrapper.className = 'chat-item-wrapper';
+                        contentWrapper.style.display = 'flex';
+                        contentWrapper.style.width = '100%';
+                        contentWrapper.style.justifyContent = 'space-between';
+                        contentWrapper.style.alignItems = 'flex-start';
+                        
+                        // Add avatar and content to a left container
+                        const leftContainer = document.createElement('div');
+                        leftContainer.style.display = 'flex';
+                        leftContainer.style.flex = '1';
+                        
+                        // Create the avatar
+                        const avatar = document.createElement('div');
+                        avatar.className = 'chat-avatar';
+                        avatar.textContent = initial;
+                        leftContainer.appendChild(avatar);
+                        
+                        // Create the content
+                        const content = document.createElement('div');
+                        content.className = 'chat-content';
+                        content.innerHTML = `
+                            <div class="chat-title">${record.Name || 'Unknown'}</div>
+                            <div class="chat-category">${record.Category || 'Uncategorized'}</div>
+                            <div class="chat-preview">${record.Description || 'No description available'}</div>
                         `;
+                        
+                        // Create phone link if available
+                        if (record.Phone) {
+                            const phoneLink = document.createElement('a');
+                            phoneLink.href = `https://wa.me/${phoneNumber}`;
+                            phoneLink.className = 'chat-phone';
+                            phoneLink.innerHTML = `<i class="fab fa-whatsapp"></i>${record.Phone}`;
+                            content.appendChild(phoneLink);
+                        }
+                        
+                        leftContainer.appendChild(content);
+                        contentWrapper.appendChild(leftContainer);
+                        
+                        // Create edit button
+                        const editButton = document.createElement('button');
+                        editButton.className = 'uk-button uk-button-small uk-button-primary edit-btn';
+                        editButton.style.marginLeft = '10px';
+                        editButton.innerHTML = '<span uk-icon="pencil"></span>';
+                        editButton.setAttribute('data-record-id', record.RecordId);
+                        
+                        // Add click event to edit button
+                        editButton.addEventListener('click', function(e) {
+                            e.preventDefault(); // Prevent any parent link from being followed
+                            e.stopPropagation(); // Stop event from bubbling up
+                            openEditModal(record);
+                        });
+                        
+                        contentWrapper.appendChild(editButton);
+                        chatItem.appendChild(contentWrapper);
+                        
+                        // Add the completed chat item to the chat list
                         chatList.appendChild(chatItem);
                     });
                 }
@@ -1199,6 +1329,9 @@
                     // Change submit button text
                     document.getElementById('submit-entry').textContent = 'Save Changes';
                     
+                    // Show the delete button when editing
+                    document.getElementById('delete-entry').style.display = 'inline-block';
+                    
                     // Show the modal
                     UIkit.modal('#add-entry-modal').show();
                 }
@@ -1219,6 +1352,9 @@
                     
                     // Reset submit button text
                     document.getElementById('submit-entry').textContent = 'Submit';
+                    
+                    // Hide the delete button when adding
+                    document.getElementById('delete-entry').style.display = 'none';
                 }
                 
                 // Set up the Add Entry button to open the modal for adding
@@ -1231,6 +1367,111 @@
                 UIkit.util.on('#add-entry-modal', 'hidden', function() {
                     resetModalForAdd();
                 });
+                
+                // Handle delete button click
+                document.getElementById('delete-entry').addEventListener('click', function() {
+                    const recordId = document.getElementById('form-record-id').value;
+                    const entryName = document.getElementById('form-name').value;
+                    
+                    if (!recordId) {
+                        UIkit.notification({
+                            message: 'No record ID found. Cannot delete.',
+                            status: 'danger',
+                            pos: 'top-center',
+                            timeout: 3000
+                        });
+                        return;
+                    }
+                    
+                    // Show confirmation dialog
+                    UIkit.modal.confirm(`Are you sure you want to delete "${entryName}"? This action cannot be undone.`)
+                    .then(function() {
+                        // User confirmed delete
+                        deleteEntry(recordId);
+                    }, function() {
+                        // User canceled delete
+                        console.log('Delete canceled');
+                    });
+                });
+                
+                // Function to delete an entry
+                function deleteEntry(recordId) {
+                    // Show loading state
+                    const deleteBtn = document.getElementById('delete-entry');
+                    const originalText = deleteBtn.textContent;
+                    deleteBtn.disabled = true;
+                    deleteBtn.textContent = 'Deleting...';
+                    
+                    // Call the server to delete the entry
+                    fetch('/delete_directory_entry', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            record_id: recordId
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Reset button state
+                        deleteBtn.disabled = false;
+                        deleteBtn.textContent = originalText;
+                        
+                        if (data.success) {
+                            // Close modal
+                            UIkit.modal('#add-entry-modal').hide();
+                            
+                            // Remove row from table
+                            const rows = table.rows().indexes();
+                            for (let i = 0; i < rows.length; i++) {
+                                const rowData = table.row(rows[i]).data();
+                                if (rowData.RecordId === recordId) {
+                                    table.row(rows[i]).remove().draw();
+                                    break;
+                                }
+                            }
+                            
+                            // Show success message
+                            UIkit.notification({
+                                message: 'Resource deleted successfully',
+                                status: 'success',
+                                pos: 'top-center',
+                                timeout: 3000
+                            });
+                        } else {
+                            // Show error message
+                            UIkit.notification({
+                                message: data.error || 'Failed to delete resource',
+                                status: 'danger',
+                                pos: 'top-center',
+                                timeout: 5000
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting entry:', error);
+                        
+                        // Reset button state
+                        deleteBtn.disabled = false;
+                        deleteBtn.textContent = originalText;
+                        
+                        // Show error notification
+                        let errorMessage = error.message;
+                        
+                        // Handle specific error messages
+                        if (errorMessage.includes('JSON') || errorMessage.includes('Unexpected token')) {
+                            errorMessage = 'Server error. Please check if all Airtable credentials are set in the .env file.';
+                        }
+                        
+                        UIkit.notification({
+                            message: `Error deleting entry: ${errorMessage}`,
+                            status: 'danger',
+                            pos: 'top-center',
+                            timeout: 5000
+                        });
+                    });
+                }
                 
                 // Handle form submission
                 document.getElementById('add-entry-form').addEventListener('submit', function(event) {
