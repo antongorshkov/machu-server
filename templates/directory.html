@@ -940,14 +940,14 @@
             </style>
             
             <button class="uk-modal-close-default" type="button" uk-close></button>
-            <h2 class="uk-modal-title" id="modal-title">Add New Resource</h2>
+            <h2 class="uk-modal-title" id="modal-title">Add New Contact</h2>
             <form id="add-entry-form" class="uk-form-stacked">
                 <!-- Hidden field for record ID when editing -->
                 <input type="hidden" id="form-record-id" value="">
                 <div class="uk-margin">
                     <label class="uk-form-label" for="form-name">Name</label>
                     <div class="uk-form-controls">
-                        <input class="uk-input" id="form-name" type="text" placeholder="Business or Resource Name" required>
+                        <input class="uk-input" id="form-name" type="text" placeholder="Business or Contact Name" required>
                     </div>
                 </div>
                 
@@ -1494,7 +1494,7 @@
                 // Function to open the modal for editing
                 function openEditModal(data) {
                     // Set modal title
-                    document.getElementById('modal-title').textContent = 'Edit Resource';
+                    document.getElementById('modal-title').textContent = 'Edit Contact';
                     
                     // Store record ID
                     document.getElementById('form-record-id').value = data.RecordId;
@@ -1529,7 +1529,7 @@
                 // Function to reset the modal for adding a new entry
                 function resetModalForAdd() {
                     // Set modal title
-                    document.getElementById('modal-title').textContent = 'Add New Resource';
+                    document.getElementById('modal-title').textContent = 'Add New Contact';
                     
                     // Clear record ID
                     document.getElementById('form-record-id').value = '';
@@ -1624,7 +1624,7 @@
                             
                             // Show success message
                             UIkit.notification({
-                                message: 'Resource deleted successfully',
+                                message: 'Contact deleted successfully',
                                 status: 'success',
                                 pos: 'top-center',
                                 timeout: 3000
@@ -1632,7 +1632,7 @@
                         } else {
                             // Show error message
                             UIkit.notification({
-                                message: data.error || 'Failed to delete resource',
+                                message: data.error || 'Failed to delete contact',
                                 status: 'danger',
                                 pos: 'top-center',
                                 timeout: 5000
