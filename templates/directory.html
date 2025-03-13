@@ -524,11 +524,13 @@
 
             .chat-item {
                 display: flex;
-                align-items: center;
+                align-items: flex-start;
                 padding: 12px 0;
                 border-bottom: 1px solid #e5e5e5;
                 text-decoration: none;
                 color: inherit;
+                width: 100%;
+                position: relative;
             }
 
             .chat-avatar {
@@ -548,6 +550,8 @@
             .chat-content {
                 flex-grow: 1;
                 min-width: 0; /* Enable text truncation */
+                width: 100%; /* Use full width */
+                box-sizing: border-box;
             }
 
             .chat-title {
@@ -571,16 +575,16 @@
             .chat-preview {
                 color: #666;
                 font-size: 14px;
-                display: -webkit-box;
-                display: -moz-box;
-                display: box;
-                -webkit-line-clamp: 2;
-                -moz-line-clamp: 2;
-                line-clamp: 2;
-                -webkit-box-orient: vertical;
-                -moz-box-orient: vertical;
-                box-orient: vertical;
-                overflow: hidden;
+                /* Remove line clamp to show full description */
+                display: block;
+                white-space: normal;
+                overflow: visible;
+                word-wrap: break-word;
+                line-height: 1.4;
+                margin-bottom: 8px;
+                width: 100%;
+                box-sizing: border-box;
+                padding-right: 0;
             }
 
             .chat-phone {
@@ -1123,11 +1127,15 @@
                         contentWrapper.style.width = '100%';
                         contentWrapper.style.justifyContent = 'space-between';
                         contentWrapper.style.alignItems = 'flex-start';
+                        contentWrapper.style.position = 'relative';
                         
                         // Add avatar and content to a left container
                         const leftContainer = document.createElement('div');
                         leftContainer.style.display = 'flex';
                         leftContainer.style.flex = '1';
+                        leftContainer.style.width = 'calc(100% - 10px)';
+                        leftContainer.style.overflow = 'visible';
+                        leftContainer.style.boxSizing = 'border-box';
                         
                         // Create the avatar
                         const avatar = document.createElement('div');
@@ -1138,10 +1146,11 @@
                         // Create the content
                         const content = document.createElement('div');
                         content.className = 'chat-content';
+                        content.style.width = '100%';
                         content.innerHTML = `
-                            <div class="chat-title">${record.Name || 'Unknown'}</div>
+                            <div class="chat-title" style="padding-right: 40px;">${record.Name || 'Unknown'}</div>
                             <div class="chat-category">${record.Category || 'Uncategorized'}</div>
-                            <div class="chat-preview">${record.Description || 'No description available'}</div>
+                            <div class="chat-preview" style="width: 100%;">${record.Description || 'No description available'}</div>
                         `;
                         
                         // Create phone link if available
@@ -1159,7 +1168,12 @@
                         // Create edit button
                         const editButton = document.createElement('button');
                         editButton.className = 'uk-button uk-button-small uk-button-primary edit-btn';
-                        editButton.style.marginLeft = '10px';
+                        editButton.style.flexShrink = '0';
+                        editButton.style.position = 'absolute';
+                        editButton.style.right = '0';
+                        editButton.style.top = '0';
+                        editButton.style.zIndex = '1';
+                        editButton.style.padding = '4px 10px';
                         editButton.innerHTML = '<span uk-icon="pencil"></span>';
                         editButton.setAttribute('data-record-id', record.RecordId);
                         
