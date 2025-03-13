@@ -29,7 +29,10 @@ app.config['OPENAI_ASSISTANT_ID'] = os.getenv('OPENAI_ASSISTANT_ID')
 app.config['OPENAI_ASSISTANT_ID_PUNCT'] = os.getenv('OPENAI_ASSISTANT_ID_PUNCT')
 app.config['MY_WA_NUMBER'] = os.getenv('MY_WA_NUMBER')
 app.config['MACHU_NUMBER'] = os.getenv('MACHU_NUMBER')
-app.config['AIRTABLE_TOKEN'] = os.getenv('AIRTABLE_TOKEN')
+
+# Airtable configuration
+app.config['AIRTABLE_API_KEY'] = os.getenv('AIRTABLE_API_KEY')  # New modern API key name
+app.config['AIRTABLE_TOKEN'] = os.getenv('AIRTABLE_TOKEN')      # Legacy token name
 app.config['AIRTABLE_BASE_ID'] = os.getenv('AIRTABLE_BASE_ID')
 app.config['AIRTABLE_TABLE_NAME'] = os.getenv('AIRTABLE_TABLE_NAME', 'main-directory')
 
@@ -88,7 +91,7 @@ def add_directory_entry():
             data = {'fields': data}
         
         # Get Airtable credentials exactly as used in the directory page
-        airtable_token = app.config.get('AIRTABLE_TOKEN')
+        airtable_token = app.config.get('AIRTABLE_API_KEY') or app.config.get('AIRTABLE_TOKEN')
         airtable_base_id = app.config.get('AIRTABLE_BASE_ID', 'appU0yK4n5WOdzSDU')  # Use from config
         airtable_table_name = app.config.get('AIRTABLE_TABLE_NAME', 'main-directory')  # Use from config
         
@@ -197,6 +200,111 @@ def add_directory_entry():
             
     except Exception as e:
         error_msg = f"Error adding directory entry: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 500
+
+@app.route("/update_directory_entry", methods=['POST'])
+def update_directory_entry():
+    # Log the incoming data
+    data = request.get_json()
+    logger.info(f"Received update data: {data}")
+    
+    # Check if record_id is provided
+    if not data.get('record_id'):
+        error_msg = "Record ID is required for updates"
+        logger.error(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 400
+    
+    # Extract record ID and fields
+    record_id = data.get('record_id')
+    
+    # Get Airtable credentials from app.config (which loads from environment variables)
+    airtable_token = app.config.get('AIRTABLE_API_KEY') or app.config.get('AIRTABLE_TOKEN')
+    airtable_base_id = app.config.get('AIRTABLE_BASE_ID')
+    airtable_table_name = app.config.get('AIRTABLE_TABLE_NAME')
+    
+    # Check if we have all required credentials
+    if not all([airtable_token, airtable_base_id, airtable_table_name]):
+        missing = []
+        if not airtable_token: missing.append("AIRTABLE_API_KEY")
+        if not airtable_base_id: missing.append("AIRTABLE_BASE_ID")
+        if not airtable_table_name: missing.append("AIRTABLE_TABLE_NAME")
+        
+        error_msg = f"Missing required environment variables: {', '.join(missing)}"
+        logger.error(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 500
+        
+    logger.info(f"Using Airtable token starting with: {airtable_token[:10]}...")
+    logger.info(f"Using base ID: {airtable_base_id}")
+    logger.info(f"Using table name: {airtable_table_name}")
+    
+    # Use the direct URL for the specific record
+    airtable_url = f"https://api.airtable.com/v0/{airtable_base_id}/{airtable_table_name}/{record_id}"
+    logger.info(f"Airtable URL for update: {airtable_url}")
+    
+    # Use the same headers format as the frontend
+    headers = { 
+        "Authorization": f"Bearer {airtable_token}", 
+        "Content-Type": "application/json"
+    }
+    
+    # Keep the field names exactly as they are sent from the frontend
+    # For Category, it should be an array since it's a Multiple Select field in Airtable
+    fields = {
+        "Title": data['fields'].get('Title', '').strip(),
+        "Category": data['fields'].get('Category', []), # Accept the array for Multiple Select
+        "Subtitle": data['fields'].get('Subtitle', '').strip() or None,
+        "Phone Number": data['fields'].get('Phone Number', '').strip() or None
+    }
+    
+    # Remove any None values to match how we read data
+    fields = {k: v for k, v in fields.items() if v is not None}
+    
+    # Validate required fields
+    if not fields.get('Title') or not fields.get('Category'):
+        error_msg = "Title and Category are required fields"
+        logger.error(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 400
+    
+    # Validate that Category array is not empty
+    if len(fields.get('Category', [])) == 0:
+        error_msg = "At least one Category is required"
+        logger.error(error_msg)
+        return jsonify({"success": False, "error": error_msg}), 400
+    
+    # Log the Category array for debugging
+    logger.info(f"Category values being sent: {fields.get('Category')}")
+    
+    # Create the update payload
+    airtable_data = {
+        "fields": fields
+    }
+    
+    logger.info(f"Sending update to Airtable: {airtable_data}")
+    
+    try:
+        # Use PATCH method to update the record
+        response = requests.patch(airtable_url, headers=headers, json=airtable_data, timeout=10)
+        
+        # Log the response from Airtable
+        logger.info(f"Airtable update response status: {response.status_code}")
+        
+        if response.status_code >= 400:
+            error_text = response.text
+            logger.error(f"Airtable update error response: {error_text}")
+            return jsonify({"success": False, "error": f"Airtable API error: {error_text}"}), response.status_code
+        
+        # Return success response with updated record
+        response_data = response.json()
+        logger.info(f"Successfully updated record: {record_id}")
+        return jsonify({
+            "success": True, 
+            "message": "Record updated successfully",
+            "record": response_data
+        })
+    
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Error updating record: {str(e)}"
         logger.error(error_msg)
         return jsonify({"success": False, "error": error_msg}), 500
 

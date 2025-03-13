@@ -747,6 +747,7 @@
                             <th>Category</th>
                             <th>Description</th>
                             <th>Phone</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -762,12 +763,14 @@
         </div>
     </div>
     
-    <!-- Add Entry Modal -->
+    <!-- Add/Edit Entry Modal -->
     <div id="add-entry-modal" uk-modal>
         <div class="uk-modal-dialog uk-modal-body">
             <button class="uk-modal-close-default" type="button" uk-close></button>
-            <h2 class="uk-modal-title">Add New Resource</h2>
+            <h2 class="uk-modal-title" id="modal-title">Add New Resource</h2>
             <form id="add-entry-form" class="uk-form-stacked">
+                <!-- Hidden field for record ID when editing -->
+                <input type="hidden" id="form-record-id" value="">
                 <div class="uk-margin">
                     <label class="uk-form-label" for="form-name">Name</label>
                     <div class="uk-form-controls">
@@ -841,10 +844,13 @@
                         Name: record.fields["Title"] || "N/A",
                         Category: category,
                         Description: record.fields["Subtitle"] || "No description",
-                        Phone: phoneNumber 
+                        Phone: phoneNumber,
+                        RecordId: record.id  // Store the record ID for edit/delete operations
                     };
                 });
 
+                // DataTable is already initialized above - no need to reinitialize
+                
                 // Generate category buttons dynamically
                 let filterContainer = document.querySelector(".filter-buttons");
                 filterContainer.innerHTML = "";  
@@ -882,7 +888,7 @@
 
                 // Initialize DataTable with minimal styling
                 const tableElement = $('#directoryTable');
-                const table = tableElement.DataTable({
+                table = tableElement.DataTable({
                     data: records,
                     columns: [
                         { data: 'Name' },
@@ -898,6 +904,12 @@
                                 }
                                 return data;
                             }
+                        },
+                        {
+                            data: null,
+                            defaultContent: '<button class="uk-button uk-button-small uk-button-primary edit-btn"><span uk-icon="pencil"></span></button>',
+                            orderable: false,
+                            width: '60px'
                         }
                     ],
                     order: [[0, 'asc']],
@@ -913,6 +925,12 @@
                     searching: true,
                     stripe: false,
                     hover: false
+                });
+                
+                // Handle edit button clicks
+                $('#directoryTable tbody').on('click', '.edit-btn', function() {
+                    const data = table.row($(this).parents('tr')).data();
+                    openEditModal(data);
                 });
                 
                 // Function to apply custom styling
@@ -1153,9 +1171,65 @@
                     }
                 });
                 
-                // Set up the Add Entry button to open the modal
-                document.getElementById('addEntryBtn').addEventListener('click', function() {
+                // Function to open the modal for editing
+                function openEditModal(data) {
+                    // Set modal title
+                    document.getElementById('modal-title').textContent = 'Edit Resource';
+                    
+                    // Store record ID
+                    document.getElementById('form-record-id').value = data.RecordId;
+                    
+                    // Populate form fields
+                    document.getElementById('form-name').value = data.Name === 'N/A' ? '' : data.Name;
+                    
+                    // For the category dropdown, find and select the right option
+                    const categorySelect = document.getElementById('form-category');
+                    for (let i = 0; i < categorySelect.options.length; i++) {
+                        if (categorySelect.options[i].value === data.Category) {
+                            categorySelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    document.getElementById('form-description').value = 
+                        data.Description === 'No description' ? '' : data.Description;
+                    document.getElementById('form-phone').value = 
+                        data.Phone === 'No phone' ? '' : data.Phone;
+                    
+                    // Change submit button text
+                    document.getElementById('submit-entry').textContent = 'Save Changes';
+                    
+                    // Show the modal
                     UIkit.modal('#add-entry-modal').show();
+                }
+                
+                // Function to reset the modal for adding a new entry
+                function resetModalForAdd() {
+                    // Set modal title
+                    document.getElementById('modal-title').textContent = 'Add New Resource';
+                    
+                    // Clear record ID
+                    document.getElementById('form-record-id').value = '';
+                    
+                    // Clear form fields
+                    document.getElementById('form-name').value = '';
+                    document.getElementById('form-category').selectedIndex = 0;
+                    document.getElementById('form-description').value = '';
+                    document.getElementById('form-phone').value = '';
+                    
+                    // Reset submit button text
+                    document.getElementById('submit-entry').textContent = 'Submit';
+                }
+                
+                // Set up the Add Entry button to open the modal for adding
+                document.getElementById('addEntryBtn').addEventListener('click', function() {
+                    resetModalForAdd();
+                    UIkit.modal('#add-entry-modal').show();
+                });
+                
+                // Make sure the modal is reset when it's closed
+                UIkit.util.on('#add-entry-modal', 'hidden', function() {
+                    resetModalForAdd();
                 });
                 
                 // Handle form submission
@@ -1165,6 +1239,8 @@
                     const submitBtn = document.getElementById('submit-entry');
                     const category = document.getElementById('form-category').value;
                     const title = document.getElementById('form-name').value;
+                    const recordId = document.getElementById('form-record-id').value;
+                    const isEdit = !!recordId;
                     
                     // Validate required fields
                     if (!title.trim()) {
@@ -1188,7 +1264,7 @@
                     }
                     
                     submitBtn.disabled = true;
-                    submitBtn.textContent = 'Submitting...';
+                    submitBtn.textContent = isEdit ? 'Saving...' : 'Submitting...';
                     
                     // Ensure we're using the correct field names that match the Airtable schema
                     // For Category, use an array since it's a Multiple Select field in Airtable
@@ -1201,10 +1277,18 @@
                         }
                     };
                     
-                    console.log('Sending form data:', formData);
+                    // If editing, add the record ID
+                    if (isEdit) {
+                        formData.record_id = recordId;
+                    }
+                    
+                    console.log(`Sending ${isEdit ? 'update' : 'add'} data:`, formData);
+                    
+                    // Determine which endpoint to use
+                    const endpoint = isEdit ? '/update_directory_entry' : '/add_directory_entry';
                     
                     // Submit to our backend route which will forward to Airtable
-                    fetch('/add_directory_entry', {
+                    fetch(endpoint, {
                         method: 'POST',
                         headers: {
                             "Content-Type": "application/json"
@@ -1219,55 +1303,85 @@
                         return data;
                     })
                     .then(data => {
-                        // Success - add the new entry to the table
-                        const newRecord = {
+                        // Get the phone number in the correct format for display
+                        const phoneNumber = formData.fields["Phone Number"] ? 
+                            formData.fields["Phone Number"] : 'No phone';
+                            
+                        // Create record object for the table
+                        const updatedRecord = {
                             Name: formData.fields["Title"],
-                            Category: formData.fields["Category"],
-                            Description: formData.fields["Subtitle"],
-                            Phone: formData.fields["Phone Number"].replace(/\D/g, "")
+                            Category: formData.fields["Category"][0], // First item from category array
+                            Description: formData.fields["Subtitle"] || "No description",
+                            Phone: phoneNumber,
+                            RecordId: isEdit ? recordId : (data.data?.id || '') // Use existing ID or get from response
                         };
                         
-                        // Add to DataTable
-                        const newRow = table.row.add(newRecord).draw();
+                        if (isEdit) {
+                            // Find the row with matching record ID and update it
+                            const rowIndex = table.rows().indexes().filter(idx => {
+                                const rowData = table.row(idx).data();
+                                return rowData.RecordId === recordId;
+                            });
+                            
+                            if (rowIndex.length > 0) {
+                                table.row(rowIndex[0]).data(updatedRecord).draw(false);
+                            }
+                            
+                            // Show success notification for update
+                            UIkit.notification({
+                                message: `Successfully updated ${formData.fields["Title"]}!`,
+                                status: 'success',
+                                pos: 'top-center',
+                                timeout: 3000
+                            });
+                        } else {
+                            // Add new row for a new entry
+                            table.row.add(updatedRecord).draw(false);
+                            
+                            // Show success notification for new entry
+                            UIkit.notification({
+                                message: `Successfully added ${formData.fields["Title"]} to the directory!`,
+                                status: 'success',
+                                pos: 'top-center',
+                                timeout: 3000
+                            });
+                        }
                         
-                        // Reset form
-                        document.getElementById('add-entry-form').reset();
-                        
-                        // Close modal
+                        // Close modal and reset the form
                         UIkit.modal('#add-entry-modal').hide();
                         
-                        // Show success notification
-                        UIkit.notification({
-                            message: `Successfully added ${formData.fields["Title"]} to the directory!`,
-                            status: 'success',
-                            pos: 'top-center',
-                            timeout: 3000
-                        });
-                        
-                        // Apply custom styling to the new row
-                        applyCustomStyling();
+                        // Apply any custom styling needed
+                        if (typeof applyCustomStyling === 'function') {
+                            applyCustomStyling();
+                        }
                         
                         // Reset submit button
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Submit';
                     })
                     .catch(error => {
-                        console.error('Error adding entry:', error);
-                        // Reset submit button
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Submit';
+                        console.error(`Error ${isEdit ? 'updating' : 'adding'} entry:`, error);
+                        
+                        // Attempt to parse error message from JSON response if possible
+                        let errorMessage = error.message;
+                        
+                        // For more specific error messages when available
+                        if (errorMessage.includes('JSON') || errorMessage.includes('Unexpected token')) {
+                            errorMessage = 'Server error. Please check if all Airtable credentials are set in the .env file.';
+                        }
                         
                         // Show error notification with more specific message
                         UIkit.notification({
-                            message: error.message || 'Failed to add entry. Please check your input and try again.',
+                            message: errorMessage || `Failed to ${isEdit ? 'update' : 'add'} entry. Please check your input and try again.`,
                             status: 'danger',
                             pos: 'top-center',
                             timeout: 5000
                         });
                     })
                     .finally(() => {
+                        // Reset submit button
                         submitBtn.disabled = false;
-                        submitBtn.textContent = 'Submit';
+                        submitBtn.textContent = isEdit ? 'Save Changes' : 'Submit';
                     });
                 });
             })
