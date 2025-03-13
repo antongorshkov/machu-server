@@ -574,7 +574,10 @@
 <body>
 
     <div class="uk-container uk-margin-large-top uk-card uk-card-default uk-card-body uk-box-shadow-small" style="max-width: 1000px; padding: 20px;">
-        <h2 class="uk-heading-line uk-text-bold uk-margin-small-bottom" style="color: #333;"><span>Resource Directory</span></h2>
+        <div class="uk-flex uk-flex-between uk-flex-middle">
+            <h2 class="uk-heading-line uk-text-bold uk-margin-small-bottom" style="color: #333;"><span>Resource Directory</span></h2>
+            <button id="addEntryBtn" class="uk-button uk-button-primary" style="background-color: #32d296; border-radius: 20px;">Add Entry</button>
+        </div>
 
         <!-- Search Input -->
         <div class="uk-margin-small-bottom">
@@ -756,6 +759,50 @@
                     <!-- Chat items will be dynamically added here -->
                 </div>
             </div>
+        </div>
+    </div>
+    
+    <!-- Add Entry Modal -->
+    <div id="add-entry-modal" uk-modal>
+        <div class="uk-modal-dialog uk-modal-body">
+            <button class="uk-modal-close-default" type="button" uk-close></button>
+            <h2 class="uk-modal-title">Add New Resource</h2>
+            <form id="add-entry-form" class="uk-form-stacked">
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="form-name">Name</label>
+                    <div class="uk-form-controls">
+                        <input class="uk-input" id="form-name" type="text" placeholder="Business or Resource Name" required>
+                    </div>
+                </div>
+                
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="form-category">Category</label>
+                    <div class="uk-form-controls">
+                        <select class="uk-select" id="form-category" required>
+                            <!-- Categories will be populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="form-description">Description</label>
+                    <div class="uk-form-controls">
+                        <textarea class="uk-textarea" id="form-description" rows="3" placeholder="Brief description of services offered" required></textarea>
+                    </div>
+                </div>
+                
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="form-phone">Phone Number (WhatsApp)</label>
+                    <div class="uk-form-controls">
+                        <input class="uk-input" id="form-phone" type="tel" placeholder="e.g. 50688123456" required>
+                    </div>
+                </div>
+                
+                <div class="uk-margin uk-text-right">
+                    <button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
+                    <button class="uk-button uk-button-primary" type="submit" id="submit-entry">Submit</button>
+                </div>
+            </form>
         </div>
     </div>
 <script>
@@ -1081,6 +1128,148 @@
                 }
 
                 applyURLFilters(); 
+                
+                // Populate the category dropdown in the Add Entry form
+                const categorySelect = document.getElementById('form-category');
+                categorySelect.innerHTML = '';
+                
+                // Add a default option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Select a category';
+                categorySelect.appendChild(defaultOption);
+                
+                // Use actual categories from Airtable
+                // This ensures we use exactly the same category values that exist in Airtable
+                const existingCategories = [...categories].map(cat => categoryMapping[cat]);
+                existingCategories.sort();
+                
+                existingCategories.forEach(category => {
+                    if (category) { // Skip empty categories
+                        const option = document.createElement('option');
+                        option.value = category;
+                        option.textContent = category;
+                        categorySelect.appendChild(option);
+                    }
+                });
+                
+                // Set up the Add Entry button to open the modal
+                document.getElementById('addEntryBtn').addEventListener('click', function() {
+                    UIkit.modal('#add-entry-modal').show();
+                });
+                
+                // Handle form submission
+                document.getElementById('add-entry-form').addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    
+                    const submitBtn = document.getElementById('submit-entry');
+                    const category = document.getElementById('form-category').value;
+                    const title = document.getElementById('form-name').value;
+                    
+                    // Validate required fields
+                    if (!title.trim()) {
+                        UIkit.notification({
+                            message: 'Title is required',
+                            status: 'danger',
+                            pos: 'top-center',
+                            timeout: 3000
+                        });
+                        return;
+                    }
+                    
+                    if (!category) {
+                        UIkit.notification({
+                            message: 'Please select a category',
+                            status: 'danger',
+                            pos: 'top-center',
+                            timeout: 3000
+                        });
+                        return;
+                    }
+                    
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Submitting...';
+                    
+                    // Ensure we're using the correct field names that match the Airtable schema
+                    // For Category, use an array since it's a Multiple Select field in Airtable
+                    const formData = {
+                        fields: {
+                            "Title": title.trim(),
+                            "Category": [category], // Put category in an array for Multiple Select field
+                            "Subtitle": document.getElementById('form-description').value.trim(),
+                            "Phone Number": document.getElementById('form-phone').value.trim()
+                        }
+                    };
+                    
+                    console.log('Sending form data:', formData);
+                    
+                    // Submit to our backend route which will forward to Airtable
+                    fetch('/add_directory_entry', {
+                        method: 'POST',
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(formData)
+                    })
+                    .then(async response => {
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Network response was not ok');
+                        }
+                        return data;
+                    })
+                    .then(data => {
+                        // Success - add the new entry to the table
+                        const newRecord = {
+                            Name: formData.fields["Title"],
+                            Category: formData.fields["Category"],
+                            Description: formData.fields["Subtitle"],
+                            Phone: formData.fields["Phone Number"].replace(/\D/g, "")
+                        };
+                        
+                        // Add to DataTable
+                        const newRow = table.row.add(newRecord).draw();
+                        
+                        // Reset form
+                        document.getElementById('add-entry-form').reset();
+                        
+                        // Close modal
+                        UIkit.modal('#add-entry-modal').hide();
+                        
+                        // Show success notification
+                        UIkit.notification({
+                            message: `Successfully added ${formData.fields["Title"]} to the directory!`,
+                            status: 'success',
+                            pos: 'top-center',
+                            timeout: 3000
+                        });
+                        
+                        // Apply custom styling to the new row
+                        applyCustomStyling();
+                        
+                        // Reset submit button
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Submit';
+                    })
+                    .catch(error => {
+                        console.error('Error adding entry:', error);
+                        // Reset submit button
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Submit';
+                        
+                        // Show error notification with more specific message
+                        UIkit.notification({
+                            message: error.message || 'Failed to add entry. Please check your input and try again.',
+                            status: 'danger',
+                            pos: 'top-center',
+                            timeout: 5000
+                        });
+                    })
+                    .finally(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Submit';
+                    });
+                });
             })
             .catch(error => console.error("Error fetching Airtable data:", error));
         });
