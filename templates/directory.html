@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resource Directory</title>
+    <title>MV Directory</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
 
     <!-- UIKit 3 CSS -->
@@ -57,9 +57,12 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
     <style>
+        /* Import modern sans-serif font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
         /* General Styling */
         body {
-            font-family: "Arial", sans-serif;
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
             background-color: #f8f9fa;
             margin: 20px;
         }
@@ -600,7 +603,7 @@
 
     <div class="uk-container uk-margin-large-top uk-card uk-card-default uk-card-body uk-box-shadow-small" style="max-width: 1000px; padding: 20px;">
         <div class="uk-flex uk-flex-between uk-flex-middle">
-            <h2 class="uk-heading-line uk-text-bold uk-margin-small-bottom" style="color: #333;"><span>Resource Directory</span></h2>
+            <h2 class="uk-heading-line uk-text-bold uk-margin-small-bottom" style="color: #333;"><span>MV Directory</span></h2>
             <button id="addEntryBtn" class="uk-button uk-button-primary" style="background-color: #32d296; border-radius: 20px;">Add Entry</button>
         </div>
 
@@ -652,8 +655,12 @@
                 
                 /* Reduce header spacing */
                 table.dataTable thead th {
-                    padding-top: 6px;
-                    padding-bottom: 6px;
+                    padding-top: 12px;
+                    padding-bottom: 12px;
+                    border-bottom: 1px solid #e5e5e5;
+                    color: #666;
+                    font-weight: 600;
+                    letter-spacing: 0.3px;
                 }
             }
         </style>
@@ -798,6 +805,77 @@
                     white-space: nowrap;
                     flex-wrap: nowrap;
                 }
+                
+                /* Modern table styling */
+                #directoryTable {
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                }
+                
+                #directoryTable thead th {
+                    background-color: #f8f8f8;
+                    font-size: 14px;
+                    font-weight: 600;
+                    text-transform: capitalize;
+                    letter-spacing: 0.2px;
+                }
+                
+                #directoryTable tbody tr {
+                    transition: background-color 0.2s ease;
+                }
+                
+                #directoryTable tbody tr:hover {
+                    background-color: #f5f9ff;
+                }
+                
+                #directoryTable tbody td {
+                    border-top: none;
+                    border-bottom: 1px solid #f0f0f0;
+                    padding: 14px 10px;
+                    vertical-align: middle;
+                    font-size: 14px;
+                    letter-spacing: 0.1px;
+                }
+                
+                /* Name cell with avatar */
+                #directoryTable .name-with-avatar {
+                    display: flex;
+                    align-items: center;
+                    font-weight: 500;
+                }
+                
+                #directoryTable .avatar {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    margin-right: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: 600;
+                    font-size: 15px;
+                    flex-shrink: 0;
+                    letter-spacing: -0.2px;
+                }
+                
+                /* Action buttons */
+                #directoryTable .edit-button {
+                    background-color: transparent;
+                    border: 1px solid #e5e5e5;
+                    border-radius: 4px;
+                    padding: 6px 10px;
+                    color: #666;
+                    transition: all 0.2s ease;
+                }
+                
+                #directoryTable .edit-button:hover {
+                    background-color: #f5f5f5;
+                    color: #333;
+                }
             }
         </style>
 
@@ -876,6 +954,34 @@
     </div>
 <script>
         document.addEventListener("DOMContentLoaded", function () {
+            // Function to add avatars to name cells
+            function addAvatarsToTable() {
+                const nameCells = document.querySelectorAll('.name-with-avatar');
+                
+                nameCells.forEach(cell => {
+                    // Check if avatar already exists to prevent duplicates
+                    if (cell.querySelector('.avatar')) return;
+                    
+                    const name = cell.getAttribute('data-name');
+                    if (!name) return;
+                    
+                    const initial = name.charAt(0).toUpperCase();
+                    
+                    // Generate a color based on the name
+                    const colors = ['#32d296', '#1e87f0', '#f0506e', '#faa05a', '#9D33D6', '#00a8e8', '#3e4a61', '#B15DFF', '#2575fc'];
+                    const colorIndex = Math.abs(name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % colors.length;
+                    const bgColor = colors[colorIndex];
+                    
+                    // Create avatar element
+                    const avatar = document.createElement('div');
+                    avatar.className = 'avatar';
+                    avatar.style.backgroundColor = bgColor;
+                    avatar.textContent = initial;
+                    
+                    // Insert avatar before the name text
+                    cell.insertBefore(avatar, cell.firstChild);
+                });
+            }
             const airtableToken = "{{ airtable_token }}";  // Provided by Flask server
             const airtableBaseId = "{{ airtable_base_id }}";  // Provided by Flask server
             const airtableTableName = "{{ airtable_table_name }}";  // Provided by Flask server
@@ -958,7 +1064,13 @@
                     data: records,
                     columns: [
                         { 
-                            data: 'Name'
+                            data: 'Name',
+                            render: function(data, type, row) {
+                                if (type === 'display') {
+                                    return `<div class="name-with-avatar" data-name="${data}">${data}</div>`;
+                                }
+                                return data;
+                            }
                         },
                         { data: 'Category' },
                         { data: 'Description' },
@@ -975,7 +1087,9 @@
                         },
                         {
                             data: null,
-                            defaultContent: '<button class="uk-button uk-button-small uk-button-primary edit-btn"><span uk-icon="pencil"></span></button>',
+                            render: function(data, type, row) {
+                                return `<button class="edit-button" data-record-id="${row.RecordId}"><span uk-icon="pencil"></span></button>`;
+                            },
                             orderable: false,
                             width: '60px',
                             className: 'dt-body-center never-hide',
@@ -983,22 +1097,36 @@
                         }
                     ],
                     order: [[0, 'asc']],
-                    pageLength: 25,
-                    dom: 't',
+                    pageLength: -1, // Show all records
+                    paging: false, // Disable pagination
+                    dom: 't', // Only show the table, no controls
                     language: {
                         search: '',
-                        searchPlaceholder: 'Search...'
+                        searchPlaceholder: 'Search...',
+                        emptyTable: "No entries found. Add a new entry to get started!",
+                        zeroRecords: "No matching entries found."
                     },
-                    // Disable all built-in styling
+                    // Modern styling
                     autoWidth: false,
                     ordering: true,
+                    columnDefs: [
+                        { targets: [2, 3, 4], orderable: false },  // Make Description, Phone and Actions columns non-sortable
+                        { className: "dt-center", targets: [1, 3, 4] }  // Center align Category, Phone, and Actions columns
+                    ],
                     searching: true,
-                    stripe: false,
-                    hover: false
+                    rowCallback: function(row, data, index) {
+                        // Add subtle alternating row color
+                        if (index % 2 === 0) {
+                            $(row).css('background-color', '#fafafa');
+                        }
+                    }
                 });
                 
+                // After table is initialized, add avatars
+                setTimeout(addAvatarsToTable, 100);
+                
                 // Handle edit button clicks
-                $('#directoryTable tbody').on('click', '.edit-btn', function() {
+                $('#directoryTable tbody').on('click', '.edit-button', function() {
                     // Check if it's a direct button in name column (mobile)
                     const recordId = $(this).data('record-id');
                     if (recordId) {
