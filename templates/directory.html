@@ -621,6 +621,12 @@
     </style>    
 </head>
 <body>
+    <!-- Hidden server configuration data -->
+    <div id="server-config" class="uk-hidden" 
+         data-use-cache="{{ 'true' if use_cache else 'false' }}"
+         data-airtable-token="{{ airtable_token }}"
+         data-airtable-base-id="{{ airtable_base_id }}"
+         data-airtable-table-name="{{ airtable_table_name }}"></div>
 
     <div class="uk-container uk-margin-large-top uk-card uk-card-default uk-card-body uk-box-shadow-small" style="max-width: 1000px; padding: 20px;">
         <div class="uk-flex uk-flex-between uk-flex-middle">
@@ -1025,14 +1031,23 @@
                     cell.insertBefore(avatar, cell.firstChild);
                 });
             }
-            const airtableToken = "{{ airtable_token }}";  // Provided by Flask server
-            const airtableBaseId = "{{ airtable_base_id }}";  // Provided by Flask server
-            const airtableTableName = "{{ airtable_table_name }}";  // Provided by Flask server
+            // Get configuration from data attributes
+            const serverConfig = document.getElementById('server-config');
+            const airtableToken = serverConfig.getAttribute('data-airtable-token');
+            const airtableBaseId = serverConfig.getAttribute('data-airtable-base-id');
+            const airtableTableName = serverConfig.getAttribute('data-airtable-table-name');
             const airtableUrl = `https://api.airtable.com/v0/${airtableBaseId}/${airtableTableName}`;
-
-            fetch(airtableUrl, {
+            
+            // Determine if we should use the cache based on server configuration
+            const useCache = serverConfig.getAttribute('data-use-cache') === 'true';
+            
+            // Choose between cached endpoint and direct Airtable API
+            const fetchUrl = useCache ? "/get_directory_data" : airtableUrl;
+            const fetchOptions = useCache ? {} : {
                 headers: { "Authorization": `Bearer ${airtableToken}`, "Content-Type": "application/json" }
-            })
+            };
+            
+            fetch(fetchUrl, fetchOptions)
             .then(response => response.json())
             .then(data => {
                 let categories = new Set();

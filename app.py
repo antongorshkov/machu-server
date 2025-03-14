@@ -2,6 +2,8 @@ import os
 import json
 import logging
 import requests
+import threading
+import time
 from logtail import LogtailHandler
 from flask import Flask, render_template, request, send_from_directory, jsonify
 from dotenv import load_dotenv
@@ -14,6 +16,16 @@ if os.getenv('FLASK_ENV') != 'production':
     load_dotenv()
 
 app = Flask(__name__, static_folder='static')
+
+# In-memory cache dictionary for directory data
+directory_cache = {
+    "data": None,
+    "last_updated": 0,
+    "updating": False
+}
+
+# Cache expiry time (5 minutes)
+CACHE_EXPIRY = 5 * 60  # seconds
 app.config['RAPID_API_KEY'] = os.getenv('RAPID_API_KEY')
 app.config['ABSTRACT_API_KEY'] = os.getenv('ABSTRACT_API_KEY')
 app.config['MORNING_MESSAGE_PHONE_NUM'] = os.getenv('MORNING_MESSAGE_PHONE_NUM')
@@ -56,10 +68,62 @@ def add2group():
 def hello_world():
     return render_template("index.html")
 
+def fetch_directory_data_from_airtable():
+    """Fetch data from Airtable and update the cache"""
+    # Set updating flag to prevent multiple simultaneous updates
+    directory_cache["updating"] = True
+    
+    try:
+        airtable_token = app.config.get('AIRTABLE_API_KEY') or app.config.get('AIRTABLE_TOKEN')
+        airtable_base_id = app.config.get('AIRTABLE_BASE_ID', 'appU0yK4n5WOdzSDU')
+        airtable_table_name = app.config.get('AIRTABLE_TABLE_NAME', 'main-directory')
+        
+        airtable_url = f"https://api.airtable.com/v0/{airtable_base_id}/{airtable_table_name}"
+        headers = {"Authorization": f"Bearer {airtable_token}"}
+        
+        logger.info("Refreshing directory data from Airtable")
+        response = requests.get(airtable_url, headers=headers)
+        
+        if response.status_code == 200:
+            # Update cache
+            directory_cache["data"] = response.json()
+            directory_cache["last_updated"] = time.time()
+            logger.info("Directory cache refreshed successfully")
+        else:
+            logger.error(f"Failed to refresh directory data. Status code: {response.status_code}")
+    except Exception as e:
+        logger.error(f"Error refreshing directory data: {str(e)}")
+    finally:
+        # Clear updating flag
+        directory_cache["updating"] = False
+
+@app.route("/get_directory_data")
+def get_directory_data():
+    """Get directory data, with auto-refresh on stale cache"""
+    current_time = time.time()
+    
+    # Check if cache needs refreshing (expired or empty)
+    cache_age = current_time - directory_cache["last_updated"]
+    if (directory_cache["data"] is None or cache_age > CACHE_EXPIRY) and not directory_cache["updating"]:
+        # Start a background thread to refresh cache
+        # This prevents blocking the current request
+        refresh_thread = threading.Thread(target=fetch_directory_data_from_airtable)
+        refresh_thread.daemon = True
+        refresh_thread.start()
+        
+        # If we have existing data, use it while refresh happens in background
+        if directory_cache["data"] is not None:
+            return jsonify(directory_cache["data"])
+        
+        # Otherwise wait for the refresh to complete (first load)
+        refresh_thread.join()
+    
+    return jsonify(directory_cache["data"] or {"records": []})
+
 @app.route("/directory")
 def directory():
     # Get Airtable credentials
-    airtable_token = app.config.get('AIRTABLE_TOKEN')
+    airtable_token = app.config.get('AIRTABLE_API_KEY') or app.config.get('AIRTABLE_TOKEN')
     airtable_base_id = app.config.get('AIRTABLE_BASE_ID', 'appU0yK4n5WOdzSDU')
     airtable_table_name = app.config.get('AIRTABLE_TABLE_NAME', 'main-directory')
     
@@ -72,11 +136,15 @@ def directory():
     return render_template("directory.html", 
                            airtable_token=airtable_token,
                            airtable_base_id=airtable_base_id,
-                           airtable_table_name=airtable_table_name)
+                           airtable_table_name=airtable_table_name,
+                           use_cache=True)
 
 @app.route("/add_directory_entry", methods=['POST'])
 def add_directory_entry():
     try:
+        # Invalidate cache to force refresh on next request
+        directory_cache["last_updated"] = 0
+        
         # Get the JSON data from the request
         data = request.get_json()
         if not data:
@@ -205,6 +273,9 @@ def add_directory_entry():
 
 @app.route("/update_directory_entry", methods=['POST'])
 def update_directory_entry():
+    # Invalidate cache to force refresh on next request
+    directory_cache["last_updated"] = 0
+    
     # Log the incoming data
     data = request.get_json()
     logger.info(f"Received update data: {data}")
@@ -311,6 +382,9 @@ def update_directory_entry():
 @app.route("/delete_directory_entry", methods=['POST'])
 def delete_directory_entry():
     """Delete an existing entry from the Airtable directory"""
+    # Invalidate cache to force refresh on next request
+    directory_cache["last_updated"] = 0
+    
     # Log the incoming data
     data = request.get_json()
     logger.info(f"Received delete request: {data}")
