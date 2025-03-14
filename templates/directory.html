@@ -874,6 +874,12 @@
                     font-weight: 500;
                 }
                 
+                #directoryTable .name-cell {
+                    font-weight: 500;
+                    color: #1a1a1a;
+                    padding: 10px 5px;
+                }
+                
                 #directoryTable .avatar {
                     width: 36px;
                     height: 36px;
@@ -887,6 +893,23 @@
                     font-size: 15px;
                     flex-shrink: 0;
                     letter-spacing: -0.2px;
+                }
+                
+                /* Avatar styling for the name column */
+                #directoryTable .avatar {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    margin-right: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: 600;
+                    font-size: 15px;
+                    flex-shrink: 0;
+                    letter-spacing: -0.2px;
+                    object-fit: cover; /* For images */
                 }
                 
                 /* Action buttons */
@@ -950,6 +973,8 @@
             <form id="add-entry-form" class="uk-form-stacked">
                 <!-- Hidden field for record ID when editing -->
                 <input type="hidden" id="form-record-id" value="">
+                <!-- Hidden field for logo URL when editing -->
+                <input type="hidden" id="form-logo-url" value="">
                 <div class="uk-margin">
                     <label class="uk-form-label" for="form-name">Name</label>
                     <div class="uk-form-controls">
@@ -990,6 +1015,27 @@
         </div>
     </div>
 <script>
+        // Function to generate a consistent color from a string (name)
+        function stringToColor(str) {
+            // Simple hash function to get a consistent number from a string
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            
+            // Convert the hash to a hex color
+            let color = '#';
+            for (let i = 0; i < 3; i++) {
+                // Get a value between 0-255
+                const value = (hash >> (i * 8)) & 0xFF;
+                // Ensure it's not too dark (below 80) or too light (above 200)
+                const adjustedValue = Math.min(Math.max(value, 80), 200);
+                // Convert to hex and pad with 0 if needed
+                color += ('00' + adjustedValue.toString(16)).substr(-2);
+            }
+            return color;
+        }
+        
         // Ensure there are no stray modal overlays when the page loads
         document.addEventListener("DOMContentLoaded", function () {
             // Remove any existing modal overlays that might be blocking interactions
@@ -1070,11 +1116,28 @@
                         phoneNumber = cleanNumber; // Store clean number for DataTables
                     }
                     
+                    // Extract Logo URL from the Airtable data if available
+                    let logoUrl = null;
+                    if (record.fields["Logo"] && Array.isArray(record.fields["Logo"]) && record.fields["Logo"].length > 0) {
+                        const logoData = record.fields["Logo"][0];
+                        if (logoData.thumbnails) {
+                            // Prefer small thumbnail for better performance, fallback to larger sizes
+                            if (logoData.thumbnails.small) {
+                                logoUrl = logoData.thumbnails.small.url;
+                            } else if (logoData.thumbnails.large) {
+                                logoUrl = logoData.thumbnails.large.url;
+                            } else if (logoData.thumbnails.full) {
+                                logoUrl = logoData.thumbnails.full.url;
+                            }
+                        }
+                    }
+                    
                     return {
                         Name: record.fields["Title"] || "N/A",
                         Category: category,
                         Description: record.fields["Subtitle"] || "No description",
                         Phone: phoneNumber,
+                        Logo: logoUrl, // Add the logo URL to the record data
                         RecordId: record.id  // Store the record ID for edit/delete operations
                     };
                 });
@@ -1125,13 +1188,36 @@
                             data: 'Name',
                             render: function(data, type, row) {
                                 if (type === 'display') {
-                                    return `<div class="name-with-avatar" data-name="${data}">${data}</div>`;
+                                    // Create the avatar from initials or logo
+                                    let avatarHtml = '';
+                                    if (row.Logo) {
+                                        // Use the logo image if available
+                                        avatarHtml = `<img src="${row.Logo}" class="avatar" alt="${data} logo">`;
+                                    } else {
+                                        // Generate avatar with initials
+                                        const initials = data.split(' ')
+                                            .map(n => n[0])
+                                            .slice(0, 2)
+                                            .join('').toUpperCase();
+                                        
+                                        const bgColor = stringToColor(data);
+                                        avatarHtml = `<div class="avatar" style="background-color: ${bgColor}">${initials}</div>`;
+                                    }
+                                    // Return the name with avatar in the same cell
+                                    return `<div class="name-with-avatar" data-name="${data}">${avatarHtml}${data}</div>`;
                                 }
                                 return data;
-                            }
+                            },
+                            width: '20%'
                         },
-                        { data: 'Category' },
-                        { data: 'Description' },
+                        { 
+                            data: 'Category',
+                            width: '15%'
+                        },
+                        { 
+                            data: 'Description',
+                            width: '40%'
+                        },
                         {
                             data: 'Phone',
                             render: function(data, type, row) {
@@ -1141,7 +1227,8 @@
                                            </a>`;
                                 }
                                 return data;
-                            }
+                            },
+                            width: '15%'
                         },
                         {
                             data: null,
@@ -1149,7 +1236,7 @@
                                 return `<button class="uk-button uk-button-small edit-button" data-record-id="${row.RecordId}"><span uk-icon="pencil"></span></button>`;
                             },
                             orderable: false,
-                            width: '60px',
+                            width: '40px',
                             className: 'dt-body-center never-hide',
                             responsivePriority: 1
                         }
@@ -1513,6 +1600,9 @@
                     
                     // Store record ID
                     document.getElementById('form-record-id').value = data.RecordId;
+                    
+                    // Store logo URL in hidden field
+                    document.getElementById('form-logo-url').value = data.Logo || '';
                     
                     // Populate form fields
                     document.getElementById('form-name').value = data.Name === 'N/A' ? '' : data.Name;
