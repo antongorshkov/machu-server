@@ -1644,6 +1644,11 @@
                                 pos: 'top-center',
                                 timeout: 3000
                             });
+                            
+                            // Re-add avatars to ensure they're displayed properly
+                            setTimeout(function() {
+                                addAvatarsToTable();
+                            }, 100);
                         } else {
                             // Show error message
                             UIkit.notification({
@@ -1800,6 +1805,11 @@
                         if (typeof applyCustomStyling === 'function') {
                             applyCustomStyling();
                         }
+                        
+                        // Re-add avatars to the table cells after update/add
+                        setTimeout(function() {
+                            addAvatarsToTable();
+                        }, 100); // Small delay to ensure the table has finished rendering
                         
                         // Reset submit button
                         submitBtn.disabled = false;
