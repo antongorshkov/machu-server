@@ -133,13 +133,11 @@
         /* 📌 Improve category button layout */
         .filter-buttons {
             display: flex;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             gap: 6px;
             justify-content: flex-start;
-            margin-bottom: 2px;
-            overflow-x: auto;
+            margin-bottom: 10px;
             padding-bottom: 0;
-            -webkit-overflow-scrolling: touch;
         }
 
         /* 📌 Category buttons - more compact & uniform */
@@ -644,8 +642,8 @@
 
         <!-- Category Filters -->
         <div class="uk-margin-small-bottom filter-section">
-            <div class="filter-container">
-                <div class="filter-buttons">
+            <div class="filter-container" style="display: block; width: 100%; overflow: hidden;">
+                <div class="filter-buttons" style="display: flex; flex-wrap: wrap; width: 100%;">
                     <!-- Buttons will be dynamically added here -->
                 </div>
             </div>
@@ -695,15 +693,17 @@
         <style>
             /* Responsive filter buttons */
             .filter-container {
-                display: flex;
-                justify-content: center;
+                display: block;
                 width: 100%;
+                overflow: visible;
             }
             
             .filter-buttons {
                 display: flex;
+                flex-wrap: wrap;
                 gap: 4px;
                 padding: 0 4px;
+                width: 100%;
             }
             
             /* Category button styling */
