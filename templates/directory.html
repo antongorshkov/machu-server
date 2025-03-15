@@ -1005,6 +1005,43 @@
                     </div>
                 </div>
                 
+                <div class="uk-margin">
+                    <label class="uk-form-label" for="form-logo">Logo/Photo</label>
+                    <div class="uk-form-controls">
+                        <!-- Image preview container -->
+                        <div id="logo-preview-container" class="uk-margin-small-bottom" style="display: none;">
+                            <div class="uk-grid uk-grid-small" uk-grid>
+                                <div>
+                                    <div id="current-logo-preview" style="width: 50px; height: 50px; border-radius: 50%; background-size: cover; background-position: center;">
+                                    </div>
+                                </div>
+                                <div class="uk-width-expand">
+                                    <div class="uk-text-small uk-text-muted">Current logo</div>
+                                    <button type="button" id="remove-logo-btn" class="uk-button uk-button-small uk-button-default">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- File input -->
+                        <div class="js-upload uk-placeholder uk-text-center">
+                            <span uk-icon="icon: cloud-upload"></span>
+                            <span class="uk-text-middle">Drop a logo image here or</span>
+                            <div uk-form-custom>
+                                <input type="file" id="form-logo" accept="image/*">
+                                <span class="uk-link">select one</span>
+                            </div>
+
+                            <p class="uk-text-small uk-text-muted">Recommended: square image, will be displayed as a circle</p>
+                        </div>
+                        
+                        <!-- New logo preview -->
+                        <div id="new-logo-preview" style="display: none;">
+                            <img id="new-logo-image" style="max-width: 100px; max-height: 100px; border-radius: 50%;">
+                            <button type="button" id="cancel-new-logo" class="uk-button uk-button-small uk-button-default uk-margin-small-left">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="uk-margin uk-text-right" style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px;">
                     <!-- Delete button - only show when editing -->
                     <button class="uk-button uk-button-danger" type="button" id="delete-entry" style="display:none; background-color: #f0506e; color: white; font-weight: bold;">Delete</button>
@@ -1118,7 +1155,14 @@
                     
                     // Extract Logo URL from the Airtable data if available
                     let logoUrl = null;
-                    if (record.fields["Logo"] && Array.isArray(record.fields["Logo"]) && record.fields["Logo"].length > 0) {
+                    
+                    // First check for Cloudinary URL as it takes precedence
+                    if (record.fields["LogoCloudinaryUrl"]) {
+                        logoUrl = record.fields["LogoCloudinaryUrl"];
+                        console.log("Using Cloudinary URL:", logoUrl);
+                    }
+                    // Fallback to Airtable thumbnails if no Cloudinary URL
+                    else if (record.fields["Logo"] && Array.isArray(record.fields["Logo"]) && record.fields["Logo"].length > 0) {
                         const logoData = record.fields["Logo"][0];
                         if (logoData.thumbnails) {
                             // Prefer small thumbnail for better performance, fallback to larger sizes
@@ -1601,8 +1645,26 @@
                     // Store record ID
                     document.getElementById('form-record-id').value = data.RecordId;
                     
-                    // Store logo URL in hidden field
-                    document.getElementById('form-logo-url').value = data.Logo || '';
+                    // Store logo URL in hidden field and show preview if available
+                    const logoUrl = data.Logo || '';
+                    document.getElementById('form-logo-url').value = logoUrl;
+                    
+                    // Display current logo if available
+                    const logoPreviewContainer = document.getElementById('logo-preview-container');
+                    const currentLogoPreview = document.getElementById('current-logo-preview');
+                    
+                    if (logoUrl) {
+                        // Show logo preview
+                        currentLogoPreview.style.backgroundImage = `url(${logoUrl})`;
+                        logoPreviewContainer.style.display = 'block';
+                    } else {
+                        // Hide logo preview if no logo
+                        logoPreviewContainer.style.display = 'none';
+                        currentLogoPreview.style.backgroundImage = '';
+                    }
+                    
+                    // Hide new logo preview
+                    document.getElementById('new-logo-preview').style.display = 'none';
                     
                     // Populate form fields
                     document.getElementById('form-name').value = data.Name === 'N/A' ? '' : data.Name;
@@ -1636,8 +1698,20 @@
                     // Set modal title
                     document.getElementById('modal-title').textContent = 'Add New Contact';
                     
-                    // Clear record ID
+                    // Clear record ID and logo url
                     document.getElementById('form-record-id').value = '';
+                    document.getElementById('form-logo-url').value = '';
+                    
+                    // Reset logo previews
+                    document.getElementById('logo-preview-container').style.display = 'none';
+                    document.getElementById('new-logo-preview').style.display = 'none';
+                    document.getElementById('current-logo-preview').style.backgroundImage = '';
+                    
+                    // Reset file input
+                    const fileInput = document.getElementById('form-logo');
+                    if (fileInput) {
+                        fileInput.value = '';
+                    }
                     
                     // Clear form fields
                     document.getElementById('form-name').value = '';
@@ -1661,6 +1735,58 @@
                 // Make sure the modal is reset when it's closed
                 UIkit.util.on('#add-entry-modal', 'hidden', function() {
                     resetModalForAdd();
+                });
+                
+                // Handle logo file input changes
+                document.getElementById('form-logo').addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        // Show the new logo preview
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            const img = document.getElementById('new-logo-image');
+                            img.src = event.target.result;
+                            document.getElementById('new-logo-preview').style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                
+                // Handle remove logo button
+                document.getElementById('remove-logo-btn').addEventListener('click', function() {
+                    console.log('Remove logo button clicked');
+                    
+                    // Clear the logo URL
+                    const logoUrlField = document.getElementById('form-logo-url');
+                    console.log('Previous logo URL:', logoUrlField.value);
+                    logoUrlField.value = '';
+                    console.log('Cleared logo URL:', logoUrlField.value);
+                    
+                    // Hide the preview container
+                    const previewContainer = document.getElementById('logo-preview-container');
+                    previewContainer.style.display = 'none';
+                    console.log('Set preview container display to:', previewContainer.style.display);
+                    
+                    // Clear the background image
+                    document.getElementById('current-logo-preview').style.backgroundImage = '';
+                    
+                    // Create a flag to indicate removal
+                    if (!document.getElementById('logo-removed-flag')) {
+                        const removalFlag = document.createElement('input');
+                        removalFlag.type = 'hidden';
+                        removalFlag.id = 'logo-removed-flag';
+                        removalFlag.name = 'logo-removed-flag';
+                        removalFlag.value = 'true';
+                        document.getElementById('add-entry-form').appendChild(removalFlag);
+                        console.log('Added logo removal flag to form');
+                    }
+                });
+                
+                // Handle cancel new logo button
+                document.getElementById('cancel-new-logo').addEventListener('click', function() {
+                    // Clear the file input and hide the preview
+                    document.getElementById('form-logo').value = '';
+                    document.getElementById('new-logo-preview').style.display = 'none';
                 });
                 
                 // Handle delete button click
@@ -1807,9 +1933,26 @@
                     submitBtn.disabled = true;
                     submitBtn.textContent = isEdit ? 'Saving...' : 'Submitting...';
                     
-                    // Ensure we're using the correct field names that match the Airtable schema
-                    // For Category, use an array since it's a Multiple Select field in Airtable
-                    const formData = {
+                    // Create form data with proper fields
+                    const fileInput = document.getElementById('form-logo');
+                    const hasNewFile = fileInput.files && fileInput.files.length > 0;
+                    const existingLogoUrl = document.getElementById('form-logo-url').value;
+                    // Check for our explicit removal flag rather than relying on display state
+                    const logoRemovedFlag = document.getElementById('logo-removed-flag');
+                    const shouldRemoveLogo = logoRemovedFlag ? true : false;
+                    
+                    console.log('Logo removal debug:', {
+                        existingLogoUrl,
+                        logoRemovedFlag: logoRemovedFlag ? 'true' : 'false',
+                        shouldRemoveLogo,
+                        logoPreviewContainerDisplay: document.getElementById('logo-preview-container').style.display
+                    });
+                    
+                    // Prepare a FormData object for multipart submission
+                    const multipartFormData = new FormData();
+                    
+                    // Basic Airtable fields data as JSON
+                    const fieldsData = {
                         fields: {
                             "Title": title.trim(),
                             "Category": [category], // Put category in an array for Multiple Select field
@@ -1820,21 +1963,32 @@
                     
                     // If editing, add the record ID
                     if (isEdit) {
-                        formData.record_id = recordId;
+                        fieldsData.record_id = recordId;
                     }
                     
-                    console.log(`Sending ${isEdit ? 'update' : 'add'} data:`, formData);
+                    // Append fields data as JSON
+                    multipartFormData.append('data', JSON.stringify(fieldsData));
+                    
+                    // Append logo action
+                    if (hasNewFile) {
+                        multipartFormData.append('logo_action', 'upload');
+                        multipartFormData.append('logo_file', fileInput.files[0]);
+                    } else if (shouldRemoveLogo) {
+                        multipartFormData.append('logo_action', 'remove');
+                    } else {
+                        multipartFormData.append('logo_action', 'keep');
+                    }
+                    
+                    console.log(`Sending ${isEdit ? 'update' : 'add'} data:`, fieldsData);
                     
                     // Determine which endpoint to use
                     const endpoint = isEdit ? '/update_directory_entry' : '/add_directory_entry';
                     
                     // Submit to our backend route which will forward to Airtable
+                    // When sending FormData, do not set Content-Type - browser will set it with boundary
                     fetch(endpoint, {
                         method: 'POST',
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(formData)
+                        body: multipartFormData
                     })
                     .then(async response => {
                         const data = await response.json();
@@ -1845,16 +1999,20 @@
                     })
                     .then(data => {
                         // Get the phone number in the correct format for display
-                        const phoneNumber = formData.fields["Phone Number"] ? 
-                            formData.fields["Phone Number"] : 'No phone';
+                        const phoneNumber = fieldsData.fields["Phone Number"] ? 
+                            fieldsData.fields["Phone Number"] : 'No phone';
                             
                         // Create record object for the table
                         const updatedRecord = {
-                            Name: formData.fields["Title"],
-                            Category: formData.fields["Category"][0], // First item from category array
-                            Description: formData.fields["Subtitle"] || "No description",
+                            Name: fieldsData.fields["Title"],
+                            Category: fieldsData.fields["Category"][0], // First item from category array
+                            Description: fieldsData.fields["Subtitle"] || "No description",
                             Phone: phoneNumber,
-                            RecordId: isEdit ? recordId : (data.data?.id || '') // Use existing ID or get from response
+                            // For logo, we need to respect when it's intentionally removed
+                            // If the user removed the logo (logo_action was 'remove'), data.logoUrl will be null
+                            // In that case, we should use null, not fall back to existingLogoUrl
+                            Logo: shouldRemoveLogo ? null : (data.logoUrl || existingLogoUrl),
+                            RecordId: isEdit ? recordId : (data.id || '') // Use existing ID or get from response
                         };
                         
                         if (isEdit) {
@@ -1870,7 +2028,7 @@
                             
                             // Show success notification for update
                             UIkit.notification({
-                                message: `Successfully updated ${formData.fields["Title"]}!`,
+                                message: `Successfully updated ${fieldsData.fields["Title"]}!`,
                                 status: 'success',
                                 pos: 'top-center',
                                 timeout: 3000
@@ -1881,7 +2039,7 @@
                             
                             // Show success notification for new entry
                             UIkit.notification({
-                                message: `Successfully added ${formData.fields["Title"]} to the directory!`,
+                                message: `Successfully added ${fieldsData.fields["Title"]} to the directory!`,
                                 status: 'success',
                                 pos: 'top-center',
                                 timeout: 3000

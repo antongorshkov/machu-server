@@ -4,6 +4,10 @@ import logging
 import requests
 import threading
 import time
+import base64
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 from logtail import LogtailHandler
 from flask import Flask, render_template, request, send_from_directory, jsonify
 from dotenv import load_dotenv
@@ -16,6 +20,23 @@ if os.getenv('FLASK_ENV') != 'production':
     load_dotenv()
 
 app = Flask(__name__, static_folder='static')
+
+# Configure Cloudinary
+cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
+api_key = os.environ.get('CLOUDINARY_API_KEY')
+api_secret = os.environ.get('CLOUDINARY_API_SECRET')
+
+if cloud_name and api_key and api_secret:
+    cloudinary.config(
+        cloud_name=cloud_name,
+        api_key=api_key,
+        api_secret=api_secret
+    )
+    logger = logging.getLogger(__name__)
+    logger.info("Cloudinary configured successfully")
+else:
+    logger = logging.getLogger(__name__)
+    logger.warning("Cloudinary not configured - missing environment variables")
 
 # In-memory cache dictionary for directory data
 directory_cache = {
@@ -145,18 +166,29 @@ def add_directory_entry():
         # Invalidate cache to force refresh on next request
         directory_cache["last_updated"] = 0
         
-        # Get the JSON data from the request
-        data = request.get_json()
-        if not data:
-            logger.error("No JSON data received in request")
-            return jsonify({"success": False, "error": "No data received"}), 400
-            
-        logger.info(f"Received form data: {data}")
+        # Handle multipart form data or JSON
+        logo_action = 'keep'
+        logo_file = None
+        
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # For multipart form data with file uploads
+            json_data = json.loads(request.form.get('data', '{}'))
+            logo_action = request.form.get('logo_action', 'keep')
+            logo_file = request.files.get('logo_file')
+            logger.info(f"Received add request with logo action: {logo_action}")
+        else:
+            # For regular JSON data
+            json_data = request.get_json()
+            if not json_data:
+                logger.error("No JSON data received in request")
+                return jsonify({"success": False, "error": "No data received"}), 400
+        
+        logger.info(f"Received form data: {json_data}")
         
         # Ensure data has the correct structure for Airtable
-        if 'fields' not in data:
+        if 'fields' not in json_data:
             logger.warning("Missing 'fields' key in the request data - restructuring")
-            data = {'fields': data}
+            json_data = {'fields': json_data}
         
         # Get Airtable credentials exactly as used in the directory page
         airtable_token = app.config.get('AIRTABLE_API_KEY') or app.config.get('AIRTABLE_TOKEN')
@@ -187,11 +219,34 @@ def add_directory_entry():
         # Keep the field names exactly as they are sent from the frontend
         # For Category, it should be an array since it's a Multiple Select field in Airtable
         fields = {
-            "Title": data['fields'].get('Title', '').strip(),
-            "Category": data['fields'].get('Category', []), # Accept the array directly for Multiple Select
-            "Subtitle": data['fields'].get('Subtitle', '').strip() or None,
-            "Phone Number": data['fields'].get('Phone Number', '').strip() or None
+            "Title": json_data['fields'].get('Title', '').strip(),
+            "Category": json_data['fields'].get('Category', []), # Accept the array directly for Multiple Select
+            "Subtitle": json_data['fields'].get('Subtitle', '').strip() or None,
+            "Phone Number": json_data['fields'].get('Phone Number', '').strip() or None
         }
+        
+        # Store logo file data for later upload (second step)
+        logo_file_data = None
+        logo_file_name = None
+        logo_file_type = None
+        
+        # For new entries, we'll use two-step upload process
+        if logo_action == 'upload' and logo_file:
+            try:
+                # Read the file data for use after the record is created
+                logo_file_data = logo_file.read()
+                logo_file_name = logo_file.filename
+                logo_file_type = logo_file.content_type
+                
+                logger.info(f"Prepared logo file for upload after record creation: {logo_file_name}, type: {logo_file_type}, size: {len(logo_file_data)} bytes")
+                
+                # We'll exclude the Logo field from the initial record creation
+                # We'll add it in a second step after getting the Airtable record ID
+                if 'Logo' in fields:
+                    del fields['Logo']
+            except Exception as e:
+                logger.error(f"Error preparing logo file: {str(e)}")
+                # Continue without the logo if there's an error
         
         # Remove any None values to match how we read data
         fields = {k: v for k, v in fields.items() if v is not None}
@@ -254,7 +309,82 @@ def add_directory_entry():
                 return jsonify({"success": False, "error": f"Airtable API error: {error_text}"}), response.status_code
                 
             response.raise_for_status()
-            return jsonify({"success": True, "data": response.json()}), 200
+            
+            # Get the created record data
+            created_data = response.json()
+            
+            # Extract record ID from response
+            # The structure depends on which endpoint we used
+            record_id = None
+            if 'id' in created_data:
+                # Direct creation response
+                record_id = created_data['id']
+            elif 'records' in created_data and len(created_data['records']) > 0:
+                # Records endpoint response
+                record_id = created_data['records'][0]['id']
+            
+            # STEP 2: Handle file upload if we have a file to upload and a record ID
+            if logo_file_data and logo_file_name and logo_file_type and record_id:
+                try:
+                    logger.info(f"Starting Cloudinary upload for new record: {record_id}")
+                    
+                    # 1. Upload the image to Cloudinary
+                    # Create a unique folder for each record
+                    upload_folder = f"directory_logos/{record_id}"
+                    
+                    # Upload the image to Cloudinary
+                    upload_result = cloudinary.uploader.upload(
+                        logo_file_data,
+                        folder=upload_folder,
+                        public_id=logo_file_name.split('.')[0],  # Use filename without extension
+                        resource_type="auto"  # Auto-detect resource type
+                    )
+                    
+                    logger.info(f"Cloudinary upload result: {upload_result}")
+                    
+                    # Get the secure URL from the upload result
+                    if 'secure_url' in upload_result:
+                        cloudinary_url = upload_result['secure_url']
+                        logger.info(f"Cloudinary URL: {cloudinary_url}")
+                        
+                        # 2. Update the Airtable record with the Cloudinary URL
+                        attachment_data = {
+                            "fields": {
+                                "Logo": [
+                                    {
+                                        "url": cloudinary_url,
+                                        "filename": logo_file_name
+                                    }
+                                ]
+                            }
+                        }
+                        
+                        # Update the record with our Cloudinary URL
+                        attachment_url = f'https://api.airtable.com/v0/{airtable_base_id}/{airtable_table_name}/{record_id}'
+                        attachment_response = requests.patch(
+                            attachment_url,
+                            headers={
+                                'Authorization': f'Bearer {airtable_token}',
+                                'Content-Type': 'application/json'
+                            },
+                            json=attachment_data
+                        )
+                        
+                        if attachment_response.status_code >= 400:
+                            logger.error(f"Error updating record with Cloudinary URL: {attachment_response.status_code} - {attachment_response.text}")
+                        else:
+                            # Get the updated record data
+                            attachment_result = attachment_response.json()
+                            logger.info(f"Successfully updated record with Cloudinary URL")
+                            
+                            # Update the response data with file information
+                            created_data = attachment_result
+                    else:
+                        logger.error(f"No secure_url in Cloudinary upload response: {upload_result}")
+                except Exception as e:
+                    logger.error(f"Error in Cloudinary upload process for new record: {str(e)}")
+            
+            return jsonify({"success": True, "data": created_data}), 200
             
         except requests.exceptions.Timeout:
             error_msg = "Request to Airtable timed out"
@@ -276,18 +406,35 @@ def update_directory_entry():
     # Invalidate cache to force refresh on next request
     directory_cache["last_updated"] = 0
     
-    # Log the incoming data
-    data = request.get_json()
-    logger.info(f"Received update data: {data}")
-    
-    # Check if record_id is provided
-    if not data.get('record_id'):
-        error_msg = "Record ID is required for updates"
+    # Handle multipart form data
+    try:
+        # Get form data
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # For multipart form data with file uploads
+            json_data = json.loads(request.form.get('data', '{}'))
+            logo_action = request.form.get('logo_action', 'keep')
+            logo_file = request.files.get('logo_file')
+            logger.info(f"Received update with logo action: {logo_action}")
+        else:
+            # For regular JSON data
+            json_data = request.get_json()
+            logo_action = 'keep'
+            logo_file = None
+            
+        logger.info(f"Received update data: {json_data}")
+        
+        # Check if record_id is provided
+        if not json_data.get('record_id'):
+            error_msg = "Record ID is required for updates"
+            logger.error(error_msg)
+            return jsonify({"success": False, "error": error_msg}), 400
+        
+        # Extract record ID
+        record_id = json_data.get('record_id')
+    except Exception as e:
+        error_msg = f"Error processing form data: {str(e)}"
         logger.error(error_msg)
         return jsonify({"success": False, "error": error_msg}), 400
-    
-    # Extract record ID and fields
-    record_id = data.get('record_id')
     
     # Get Airtable credentials from app.config (which loads from environment variables)
     airtable_token = app.config.get('AIRTABLE_API_KEY') or app.config.get('AIRTABLE_TOKEN')
@@ -322,11 +469,46 @@ def update_directory_entry():
     # Keep the field names exactly as they are sent from the frontend
     # For Category, it should be an array since it's a Multiple Select field in Airtable
     fields = {
-        "Title": data['fields'].get('Title', '').strip(),
-        "Category": data['fields'].get('Category', []), # Accept the array for Multiple Select
-        "Subtitle": data['fields'].get('Subtitle', '').strip() or None,
-        "Phone Number": data['fields'].get('Phone Number', '').strip() or None
+        "Title": json_data['fields'].get('Title', '').strip(),
+        "Category": json_data['fields'].get('Category', []), # Accept the array for Multiple Select
+        "Subtitle": json_data['fields'].get('Subtitle', '').strip() or None,
+        "Phone Number": json_data['fields'].get('Phone Number', '').strip() or None
     }
+    
+    # Handle logo upload
+    logo_url = None
+    logo_file_data = None
+    logo_file_name = None
+    logo_file_type = None
+    
+    # If user wants to remove the logo
+    if logo_action == 'remove':
+        # Set Logo to an empty array to remove existing logo
+        fields["Logo"] = []
+        # Also ensure any Cloudinary URL is cleared
+        fields["LogoCloudinaryUrl"] = None
+        logger.info("Removing existing logo and Cloudinary URL")
+    
+    # For uploading, we'll use the two-step approach required by Airtable:
+    # 1. First update the record normally (without attachment)
+    # 2. Then use the returned attachment URL to upload the file in a separate request
+    elif logo_action == 'upload' and logo_file:
+        try:
+            # Read and store the file data for later use (after initial update)
+            logo_file_data = logo_file.read()
+            logo_file_name = logo_file.filename
+            logo_file_type = logo_file.content_type
+            
+            logger.info(f"Preparing logo file for upload: {logo_file_name}, type: {logo_file_type}, size: {len(logo_file_data)} bytes")
+            
+            # We'll temporarily exclude the Logo field from this update
+            # We'll add it in the second step after getting the upload URL
+            if 'Logo' in fields:
+                del fields['Logo']
+                
+        except Exception as e:
+            logger.error(f"Error preparing logo file: {str(e)}")
+            # Continue without the logo if there's an error in preparation
     
     # Remove any None values to match how we read data
     fields = {k: v for k, v in fields.items() if v is not None}
@@ -368,10 +550,85 @@ def update_directory_entry():
         # Return success response with updated record
         response_data = response.json()
         logger.info(f"Successfully updated record: {record_id}")
+        
+        # STEP 2: Handle file upload if we have prepared logo file data
+        if logo_file_data and logo_file_name and logo_file_type:
+            try:
+                logger.info(f"Starting Cloudinary upload for update record: {record_id}")
+                
+                # 1. Upload the image to Cloudinary
+                # Create a unique folder for each record
+                upload_folder = f"directory_logos/{record_id}"
+                
+                # Upload the image to Cloudinary
+                upload_result = cloudinary.uploader.upload(
+                    logo_file_data,
+                    folder=upload_folder,
+                    public_id=logo_file_name.split('.')[0],  # Use filename without extension
+                    resource_type="auto",  # Auto-detect resource type
+                    overwrite=True  # Overwrite any existing file with the same public_id
+                )
+                
+                logger.info(f"Cloudinary upload result: {upload_result}")
+                
+                # Get the secure URL from the upload result
+                if 'secure_url' in upload_result:
+                    cloudinary_url = upload_result['secure_url']
+                    logger.info(f"Cloudinary URL: {cloudinary_url}")
+                    
+                    # 2. Update the Airtable record with the Cloudinary URL
+                    attachment_data = {
+                        "fields": {
+                            "Logo": [
+                                {
+                                    "url": cloudinary_url,
+                                    "filename": logo_file_name
+                                }
+                            ],
+                            # Store the Cloudinary URL in a custom field for easier access
+                            "LogoCloudinaryUrl": cloudinary_url
+                        }
+                    }
+                    
+                    # Update the record with our Cloudinary URL
+                    attachment_url = f'https://api.airtable.com/v0/{airtable_base_id}/{airtable_table_name}/{record_id}'
+                    attachment_response = requests.patch(
+                        attachment_url,
+                        headers={
+                            'Authorization': f'Bearer {airtable_token}',
+                            'Content-Type': 'application/json'
+                        },
+                        json=attachment_data
+                    )
+                    
+                    if attachment_response.status_code >= 400:
+                        logger.error(f"Error updating record with Cloudinary URL: {attachment_response.status_code} - {attachment_response.text}")
+                    else:
+                        # Get the updated record data
+                        attachment_result = attachment_response.json()
+                        logger.info(f"Successfully updated record with Cloudinary URL")
+                        
+                        # Update the response data with file information
+                        response_data = attachment_result
+                else:
+                    logger.error(f"No secure_url in Cloudinary upload response: {upload_result}")
+            except Exception as e:
+                logger.error(f"Error in Cloudinary upload process: {str(e)}")
+        
+        # Extract the logo URL from the final response data
+        logo_url = None
+        if response_data.get('fields', {}).get('Logo'):
+            logo_attachments = response_data['fields'].get('Logo', [])
+            if logo_attachments and isinstance(logo_attachments, list) and len(logo_attachments) > 0:
+                logo_url = logo_attachments[0].get('url')
+                logger.info(f"Logo URL from response: {logo_url}")
+        
         return jsonify({
             "success": True, 
             "message": "Record updated successfully",
-            "record": response_data
+            "record": response_data,
+            "id": record_id,
+            "logoUrl": logo_url
         })
     
     except requests.exceptions.RequestException as e:
