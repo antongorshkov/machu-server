@@ -42,7 +42,8 @@ else:
 directory_cache = {
     "data": None,
     "last_updated": 0,
-    "updating": False
+    "updating": False,
+    "force_refresh": False  # New flag to indicate forced refresh
 }
 
 # Cache expiry time (5 minutes)
@@ -123,9 +124,11 @@ def get_directory_data():
     """Get directory data, with auto-refresh on stale cache"""
     current_time = time.time()
     
-    # Check if cache needs refreshing (expired or empty)
+    # Check if cache needs refreshing (expired, empty, or force refresh requested)
     cache_age = current_time - directory_cache["last_updated"]
-    if (directory_cache["data"] is None or cache_age > CACHE_EXPIRY) and not directory_cache["updating"]:
+    if (directory_cache["data"] is None or cache_age > CACHE_EXPIRY or directory_cache["force_refresh"]) and not directory_cache["updating"]:
+        # Reset force refresh flag if it was set
+        directory_cache["force_refresh"] = False
         # Start a background thread to refresh cache
         # This prevents blocking the current request
         refresh_thread = threading.Thread(target=fetch_directory_data_from_airtable)
@@ -140,6 +143,21 @@ def get_directory_data():
         refresh_thread.join()
     
     return jsonify(directory_cache["data"] or {"records": []})
+
+@app.route("/refresh_directory_cache")
+def refresh_directory_cache():
+    """Force a refresh of the directory data cache"""
+    # Set the force refresh flag and invalidate timestamp
+    directory_cache["force_refresh"] = True
+    directory_cache["last_updated"] = 0
+    
+    # Start a background thread to refresh cache immediately
+    refresh_thread = threading.Thread(target=fetch_directory_data_from_airtable)
+    refresh_thread.daemon = True
+    refresh_thread.start()
+    
+    # Return a success response
+    return jsonify({"success": True, "message": "Cache refresh initiated"})
 
 @app.route("/directory")
 def directory():
@@ -472,7 +490,8 @@ def update_directory_entry():
         "Title": json_data['fields'].get('Title', '').strip(),
         "Category": json_data['fields'].get('Category', []), # Accept the array for Multiple Select
         "Subtitle": json_data['fields'].get('Subtitle', '').strip() or None,
-        "Phone Number": json_data['fields'].get('Phone Number', '').strip() or None
+        "Phone Number": json_data['fields'].get('Phone Number', '').strip() or None,
+        "Website URL": json_data['fields'].get('Website URL', '').strip() or None
     }
     
     # Handle logo upload
