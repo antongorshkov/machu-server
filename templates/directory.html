@@ -21,6 +21,28 @@
             z-index: 1010 !important; /* Ensure modal has proper z-index */
         }
         
+        /* Action buttons styling */
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px; /* Minimal space between buttons */
+            white-space: nowrap;
+            width: 100%;
+        }
+        
+        /* Website button styling */
+        .website-button {
+            color: #1e87f0;
+            margin: 0;
+            padding: 0 4px !important; /* Ultra-compact padding */
+            min-width: auto !important;
+        }
+        
+        .website-button:hover {
+            color: #0f6ecd;
+        }
+        
         #add-entry-modal .uk-modal-dialog {
             width: 400px;
             max-width: 90%;
@@ -129,6 +151,20 @@
             border-radius: 8px;
             box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
         }
+        
+        /* Ensure all table cells handle content properly */
+        #directoryTable td {
+            white-space: normal;
+            word-wrap: break-word;
+            overflow: visible;
+        }
+        
+        /* Special handling for the last column */
+        #directoryTable td:last-child {
+            white-space: nowrap;
+            overflow: visible;
+            padding-right: 10px;
+        }
     
         /* 📌 Improve category button layout */
         .filter-buttons {
@@ -225,11 +261,11 @@
                 min-height: 30px;
             }
             
-            /* Make sure edit button stays visible */
+            /* Make sure action buttons stay visible */
             #directoryTable th:last-child,
             #directoryTable td:last-child {
-                width: 40px !important;
-                min-width: 40px !important;
+                width: 100px !important;
+                min-width: 100px !important;
                 display: table-cell !important;
             }
         }
@@ -948,7 +984,9 @@
                     background-color: transparent;
                     border: 1px solid #e5e5e5;
                     border-radius: 4px;
-                    padding: 6px 10px;
+                    padding: 0 4px !important;
+                    min-height: 28px;
+                    min-width: auto !important;
                     color: #666;
                     transition: all 0.2s ease;
                 }
@@ -1436,17 +1474,18 @@
                         {
                             data: null,
                             render: function(data, type, row) {
-                                let html = `<button class="uk-button uk-button-small edit-button" data-record-id="${row.RecordId}"><span uk-icon="pencil"></span></button>`;
+                                let html = `<div class="action-buttons"><button class="uk-button uk-button-small edit-button" data-record-id="${row.RecordId}"><span uk-icon="pencil"></span></button>`;
                                 
                                 // Add website icon if URL exists
                                 if (row['Website URL']) {
-                                    html += `<a href="${row['Website URL']}" class="uk-button uk-button-small uk-button-link" target="_blank" title="Visit Website"><span uk-icon="world"></span></a>`;
+                                    html += `<a href="${row['Website URL']}" class="uk-button uk-button-small uk-button-link website-button" target="_blank" title="Visit Website"><span uk-icon="world"></span></a>`;
                                 }
                                 
+                                html += `</div>`;
                                 return html;
                             },
                             orderable: false,
-                            width: '40px',
+                            width: '100px',
                             className: 'dt-body-center never-hide',
                             responsivePriority: 1
                         }
