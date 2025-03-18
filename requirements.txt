@@ -13,3 +13,4 @@ pycryptodome==3.21.0
 requests==2.31.0
 replicate==1.0.3
 cloudinary==1.42.2
+flask-cors==5.0.1
