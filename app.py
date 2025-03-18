@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from morning_message import main
 from form_submit import form_submit, add_to_group
 from message_receive import message_receive
+from flask_cors import CORS
 
 # Load environment variables from .env file
 if os.getenv('FLASK_ENV') != 'production':
