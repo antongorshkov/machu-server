@@ -21,7 +21,7 @@ if os.getenv('FLASK_ENV') != 'production':
     load_dotenv()
 
 app = Flask(__name__, static_folder='static')
-CORS(app, resources={r"/*": {"origins": "https://lovable-directory-app-5ixj8.ondigitalocean.app"}})
+CORS(app, resources={r"/*": {"origins": ["https://lovable-directory-app-5ixj8.ondigitalocean.app", "http://192.168.68.58:8080"]}})
 
 # Configure Cloudinary
 cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
