@@ -16,7 +16,16 @@ def init_openai_client():
     global client
     if client is None:
         OPENAI_API_KEY = current_app.config['OPENAI_API_KEY']
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        
+        try:
+            # Basic initialization with the monkey patch in app.py handling the proxies issue
+            client = OpenAI(api_key=OPENAI_API_KEY)
+            logging.info("OpenAI client initialized successfully")
+        except Exception as e:
+            # Log detailed error information
+            logging.error(f"Failed to initialize OpenAI client: {str(e)}")
+            # If initialization fails, log the error and re-raise
+            raise
 
 def create_assistant(file):
     """

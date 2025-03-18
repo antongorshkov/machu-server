@@ -59,6 +59,23 @@ app.config['AMBIENT_API_KEY'] = os.getenv('AMBIENT_API_KEY')
 app.config['MV_NEIGHBORS_GROUP_ID'] = os.getenv('MV_NEIGHBORS_GROUP_ID')
 app.config['MACHUKITA_TEST_GROUP_ID'] = os.getenv('MACHUKITA_TEST_GROUP_ID')
 app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
+
+# Add a monkey patch to handle the proxies parameter incompatibility
+try:
+    from openai._base_client import SyncHttpxClientWrapper
+    original_init = SyncHttpxClientWrapper.__init__
+    
+    def patched_init(self, *args, **kwargs):
+        # Remove 'proxies' from kwargs if it exists
+        if 'proxies' in kwargs:
+            logger.info("Removing 'proxies' parameter from OpenAI client initialization")
+            del kwargs['proxies']
+        return original_init(self, *args, **kwargs)
+    
+    SyncHttpxClientWrapper.__init__ = patched_init
+    logger.info("Successfully patched OpenAI client to handle 'proxies' parameter")
+except (ImportError, AttributeError) as e:
+    logger.warning(f"Could not patch OpenAI client: {str(e)}")
 app.config['OPENAI_ASSISTANT_ID'] = os.getenv('OPENAI_ASSISTANT_ID')
 app.config['OPENAI_ASSISTANT_ID_PUNCT'] = os.getenv('OPENAI_ASSISTANT_ID_PUNCT')
 app.config['MY_WA_NUMBER'] = os.getenv('MY_WA_NUMBER')
