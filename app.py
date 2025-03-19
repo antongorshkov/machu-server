@@ -209,9 +209,19 @@ def add_directory_entry():
         
         if request.content_type and 'multipart/form-data' in request.content_type:
             # For multipart form data with file uploads
-            json_data = json.loads(request.form.get('data', '{}'))
+            logger.info(f"Request content type: {request.content_type}")
+            logger.info(f"Request method: {request.method}")
+            logger.info(f"Request headers: {request.headers}")
+            
+            # Get all form fields
+            logger.info(f"Form keys: {list(request.form.keys())}")
+            
+            # Create json_data from form fields directly
+            json_data = {}
+            # Set fields from form directly instead of from a 'data' field
             logo_action = request.form.get('logo_action', 'keep')
             logo_file = request.files.get('logo_file')
+            
             logger.info(f"Received add request with logo action: {logo_action}")
         else:
             # For regular JSON data
@@ -253,14 +263,45 @@ def add_directory_entry():
         logger.info("Request headers (excluding auth): " + 
                    json.dumps({k:v for k,v in headers.items() if k.lower() != 'authorization'}))
         
-        # Keep the field names exactly as they are sent from the frontend
-        # For Category, it should be an array since it's a Multiple Select field in Airtable
-        fields = {
-            "Title": json_data['fields'].get('Title', '').strip(),
-            "Category": json_data['fields'].get('Category', []), # Accept the array directly for Multiple Select
-            "Subtitle": json_data['fields'].get('Subtitle', '').strip() or None,
-            "Phone Number": json_data['fields'].get('Phone Number', '').strip() or None
-        }
+        # Get fields from the form data if using multipart/form-data
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            category_value = request.form.get('Category', '')
+            
+            # Properly parse the category value
+            category_array = []
+            if category_value:
+                # If the value is already a JSON string with array, parse it
+                if category_value.startswith('[') and category_value.endswith(']'):
+                    try:
+                        category_array = json.loads(category_value)
+                        logger.info(f"Parsed Category into: {category_array}")
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Error parsing Category JSON: {str(e)}")
+                        # Use as a single string if we can't parse it
+                        category_array = [category_value]
+                else:
+                    # If it's just a plain string, make it a single-item array
+                    category_array = [category_value]
+            
+            # Create fields from form data
+            fields = {
+                "Title": request.form.get('Title', '').strip(),
+                "Category": category_array,  # Use the parsed array
+                "Subtitle": request.form.get('Subtitle', '').strip() or None,
+                "Phone Number": request.form.get('Phone Number', '').strip() or None,
+                "Website URL": request.form.get('Website URL', '').strip() or None
+            }
+        else:
+            # For JSON data, use the structure from the fields key
+            # Keep the field names exactly as they are sent from the frontend
+            # For Category, it should be an array since it's a Multiple Select field in Airtable
+            fields = {
+                "Title": json_data['fields'].get('Title', '').strip(),
+                "Category": json_data['fields'].get('Category', []), # Accept the array directly for Multiple Select
+                "Subtitle": json_data['fields'].get('Subtitle', '').strip() or None,
+                "Phone Number": json_data['fields'].get('Phone Number', '').strip() or None,
+                "Website URL": json_data['fields'].get('Website URL', '').strip() or None
+            }
         
         # Store logo file data for later upload (second step)
         logo_file_data = None
@@ -445,29 +486,40 @@ def update_directory_entry():
     
     # Handle multipart form data
     try:
+        # Enhanced logging for debugging
+        logger.info(f"Request content type: {request.content_type}")
+        logger.info(f"Request method: {request.method}")
+        logger.info(f"Request headers: {dict(request.headers)}")
+        
         # Get form data
         if request.content_type and 'multipart/form-data' in request.content_type:
             # For multipart form data with file uploads
-            json_data = json.loads(request.form.get('data', '{}'))
+            logger.info(f"Form keys: {list(request.form.keys())}")
+            data_str = request.form.get('data', '{}')
+            logger.info(f"Raw data string: {data_str}")
+            json_data = json.loads(data_str)
             logo_action = request.form.get('logo_action', 'keep')
             logo_file = request.files.get('logo_file')
             logger.info(f"Received update with logo action: {logo_action}")
         else:
             # For regular JSON data
+            logger.info(f"Raw request data: {request.get_data(as_text=True)}")
             json_data = request.get_json()
             logo_action = 'keep'
             logo_file = None
             
         logger.info(f"Received update data: {json_data}")
         
-        # Check if record_id is provided
-        if not json_data.get('record_id'):
+        # Check if record_id is provided, could be in json_data or directly in form
+        # Check both the parsed JSON data and the direct form fields
+        record_id = json_data.get('record_id') or request.form.get('record_id')
+        
+        if not record_id:
             error_msg = "Record ID is required for updates"
             logger.error(error_msg)
             return jsonify({"success": False, "error": error_msg}), 400
         
-        # Extract record ID
-        record_id = json_data.get('record_id')
+        logger.info(f"Using record_id: {record_id}")
     except Exception as e:
         error_msg = f"Error processing form data: {str(e)}"
         logger.error(error_msg)
@@ -503,15 +555,60 @@ def update_directory_entry():
         "Content-Type": "application/json"
     }
     
-    # Keep the field names exactly as they are sent from the frontend
+    # Handle form fields directly or from json_data
+    # For multipart/form-data, the fields come directly in the form
     # For Category, it should be an array since it's a Multiple Select field in Airtable
-    fields = {
-        "Title": json_data['fields'].get('Title', '').strip(),
-        "Category": json_data['fields'].get('Category', []), # Accept the array for Multiple Select
-        "Subtitle": json_data['fields'].get('Subtitle', '').strip() or None,
-        "Phone Number": json_data['fields'].get('Phone Number', '').strip() or None,
-        "Website URL": json_data['fields'].get('Website URL', '').strip() or None
-    }
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        # Get fields directly from form
+        category_value = request.form.get('Category', '')
+        
+        # Handle category properly - it might be a JSON string already
+        try:
+            # Check if it's a string that contains a JSON array
+            if category_value and (category_value.startswith('[') and category_value.endswith(']')):
+                category_parsed = json.loads(category_value)
+                # Now category_parsed should be a Python list
+                category_array = category_parsed
+            else:
+                # It's a simple string, just put it in an array
+                category_array = [category_value] if category_value else []
+                
+            logger.info(f"Parsed Category into: {category_array}")
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing Category value '{category_value}': {str(e)}")
+            # Fallback to simple array
+            category_array = [category_value] if category_value else []
+            
+        fields = {
+            "Title": request.form.get('Title', '').strip(),
+            "Category": category_array,  # Properly parsed array for Multiple Select field
+            "Subtitle": request.form.get('Subtitle', '').strip() or None,
+            "Phone Number": request.form.get('Phone Number', '').strip() or None,
+            "Website URL": request.form.get('Website URL', '').strip() or None
+        }
+        
+        logger.info(f"Form fields processed: {fields}")
+        logger.info(f"Category values being sent: {fields['Category']}")
+    else:
+        # For JSON data requests (should still handle the original structure)
+        fields = {}
+        if 'fields' in json_data:
+            fields = {
+                "Title": json_data['fields'].get('Title', '').strip(),
+                "Category": json_data['fields'].get('Category', []),  # Accept the array for Multiple Select
+                "Subtitle": json_data['fields'].get('Subtitle', '').strip() or None,
+                "Phone Number": json_data['fields'].get('Phone Number', '').strip() or None,
+                "Website URL": json_data['fields'].get('Website URL', '').strip() or None
+            }
+        else:
+            # Try to extract fields directly from json_data as fallback
+            fields = {
+                "Title": json_data.get('Title', '').strip(),
+                "Category": json_data.get('Category', []),
+                "Subtitle": json_data.get('Subtitle', '').strip() or None,
+                "Phone Number": json_data.get('Phone Number', '').strip() or None,
+                "Website URL": json_data.get('Website URL', '').strip() or None
+            }
     
     # Handle logo upload
     logo_url = None
@@ -563,8 +660,32 @@ def update_directory_entry():
         logger.error(error_msg)
         return jsonify({"success": False, "error": error_msg}), 400
     
-    # Log the Category array for debugging
-    logger.info(f"Category values being sent: {fields.get('Category')}")
+    # Ensure Category is a list of strings, not nested structures
+    if fields.get('Category'):
+        # Further sanitize the Category field to ensure it's just strings
+        sanitized_category = []
+        for cat in fields['Category']:
+            if isinstance(cat, str):
+                # If the value looks like a JSON string, clean it up
+                if cat.startswith('[') and cat.endswith(']'):
+                    # Try to extract just the plain category name
+                    try:
+                        # Parse the JSON string to get the array
+                        inner_cats = json.loads(cat)
+                        # Add each element from the parsed array
+                        for inner_cat in inner_cats:
+                            if inner_cat and isinstance(inner_cat, str):
+                                sanitized_category.append(inner_cat)
+                    except json.JSONDecodeError:
+                        # If we can't parse it, just use the original string
+                        sanitized_category.append(cat)
+                else:
+                    # Just a normal string, add it as is
+                    sanitized_category.append(cat)
+        
+        # Replace the category field with the sanitized version
+        fields['Category'] = sanitized_category
+        logger.info(f"Sanitized Category values: {fields['Category']}")
     
     # Create the update payload
     airtable_data = {
@@ -622,9 +743,9 @@ def update_directory_entry():
                                     "url": cloudinary_url,
                                     "filename": logo_file_name
                                 }
-                            ],
-                            # Store the Cloudinary URL in a custom field for easier access
-                            "LogoCloudinaryUrl": cloudinary_url
+                            ]
+                            # The LogoCloudinaryUrl field doesn't exist in the Airtable schema
+                            # Removed to prevent 422 error
                         }
                     }
                     
@@ -680,18 +801,30 @@ def delete_directory_entry():
     # Invalidate cache to force refresh on next request
     directory_cache["last_updated"] = 0
     
-    # Log the incoming data
-    data = request.get_json()
-    logger.info(f"Received delete request: {data}")
+    # Handle both JSON and form data
+    record_id = None
+    
+    # Log request information for debugging
+    logger.info(f"Request content type: {request.content_type}")
+    logger.info(f"Request method: {request.method}")
+    
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        # For multipart form data
+        logger.info(f"Form keys: {list(request.form.keys())}")
+        record_id = request.form.get('record_id')
+        logger.info(f"Received delete request with record_id from form: {record_id}")
+    else:
+        # For JSON data
+        data = request.get_json()
+        logger.info(f"Received delete request: {data}")
+        if data:
+            record_id = data.get('record_id')
     
     # Check if record_id is provided
-    if not data.get('record_id'):
+    if not record_id:
         error_msg = "Record ID is required for deletion"
         logger.error(error_msg)
         return jsonify({"success": False, "error": error_msg}), 400
-    
-    # Extract record ID
-    record_id = data.get('record_id')
     
     # Get Airtable credentials from app.config
     airtable_token = app.config.get('AIRTABLE_API_KEY') or app.config.get('AIRTABLE_TOKEN')
