@@ -1,6 +1,17 @@
+# Machu Server
+
+A Flask-based web server providing directory and messaging services.
+
+## Documentation
+
+API documentation for the backend endpoints is available in the [docs directory](./docs/api_documentation.md). This includes detailed information about:
+- Expected request payloads for adding, updating, and deleting directory entries
+- Response formats
+- Error handling
+
 ## Get Started
 
-This guide describes how to use DigitalOcean App Platform to run a sample Flask application.
+This guide describes how to use DigitalOcean App Platform to run this Flask application.
 
 **Note**: Following these steps may result in charges for the use of DigitalOcean services.
 
